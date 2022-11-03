@@ -227,6 +227,7 @@ public class Calculator {
                      - Convert degrees to radians when writing ° symbol, i.e. 180° -> pi
                      - Convert percentage to normal number when writing % symbol, i.e. 10% -> 1/10
                      - Use the variable 'ans' to refer to the previous result, or operate as if it was at the front of the expression
+                     - Set the variable 'precision' to set the approximate decimal number precision (>1, default is 100)
                      - Set the variable 'exit' to a desired value to set the exit code of the program, exit with \\exit""");
             default -> System.out.println("Unknown command: '\\" + cmd + "'");
         }
