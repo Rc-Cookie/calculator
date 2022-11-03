@@ -1,7 +1,6 @@
 package com.github.rccookie.math;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -9,7 +8,7 @@ public final class Unit {
 
 
     public static final Unit ONE       = new Unit();
-    public static final Unit KILOGRAMM = new Unit(1, SiUnit.MASS);
+    public static final Unit KILOGRAMM = new Unit(SiUnit.MASS);
     public static final Unit METER     = new Unit(SiUnit.LENGTH);
     public static final Unit SECOND    = new Unit(SiUnit.TIME);
     public static final Unit AMPERE    = new Unit(SiUnit.CURRENT);
@@ -19,51 +18,75 @@ public final class Unit {
 
 
     private final byte[] units = new byte[7];
-    private final byte scale;
 
     public Unit(SiUnit... siUnits) {
-        this(0, siUnits);
+        this(siUnits, new SiUnit[0]);
     }
 
-    public Unit(int scale, SiUnit... siUnits) {
-        this(scale, siUnits, new SiUnit[0]);
-    }
-
-    public Unit(int scale, SiUnit[] upperUnits, SiUnit[] lowerUnits) {
-        this(scale);
+    public Unit(SiUnit[] upperUnits, SiUnit[] lowerUnits) {
         for(SiUnit unit : upperUnits)
             units[unit.ordinal()]++;
         for(SiUnit unit : lowerUnits)
             units[unit.ordinal()]--;
     }
 
-    private Unit(int scale, byte[] units) {
-        this(scale);
-        System.arraycopy(units, 0, this.units, 0, 7);
-    }
-
-    private Unit(int scale) {
-        this.scale = (byte) scale;
-    }
+    private Unit() { }
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof Unit u && scale == u.scale && Arrays.equals(units, u.units);
+        return obj instanceof Unit u && Arrays.equals(units, u.units);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(Arrays.hashCode(units), scale);
+        return Arrays.hashCode(units);
     }
 
     @Override
     public String toString() {
-        StringBuilder upper
+        return toString(0);
     }
 
-    @NotNull
-    public Unit scale(int exp) {
-        return exp == 0 ? this : new Unit(scale + exp, units);
+    public String toString(int scale) {
+        StringBuilder upper = new StringBuilder(), lower = new StringBuilder();
+
+        for(int i=0; i<7; i++)
+            if(units[i] != 0)
+                appendString(units[i] > 0 ? upper : lower, i);
+
+        if(upper.isEmpty()) upper.append(1);
+        else upper.deleteCharAt(0);
+
+        if(lower.isEmpty()) return upper.toString();
+        lower.deleteCharAt(0);
+
+        return upper.append('/').append(lower).toString();
+    }
+
+    private void appendString(StringBuilder str, int u) {
+        if(units[u] == 0) return;
+        str.append('*');
+        int c = Math.abs(units[u]);
+        str.append(SiUnit.get(u).getSymbol());
+        if(c != 1) appendSuperscript(str, c);
+    }
+
+    private static void appendSuperscript(StringBuilder str, int x) {
+        String s = x + "";
+        for(int i=0; i<s.length(); i++) str.append(switch(s.charAt(i)) {
+            case '0' -> '\u2070';
+            case '1' -> '\u00B9';
+            case '2' -> '\u00B2';
+            case '3' -> '\u00B3';
+            case '4' -> '\u2074';
+            case '5' -> '\u2075';
+            case '6' -> '\u2076';
+            case '7' -> '\u2077';
+            case '8' -> '\u2078';
+            case '9' -> '\u2079';
+            case '-' -> '\u207B';
+            default -> s.charAt(i);
+        });
     }
 
     @NotNull
@@ -82,7 +105,7 @@ public final class Unit {
 
     @NotNull
     public Unit multiply(Unit u) {
-        Unit x = new Unit(scale + u.scale);
+        Unit x = new Unit();
         for(int i=0; i<7; i++)
             x.units[i] = (byte) (units[i] + u.units[i]);
         return x;
@@ -90,7 +113,7 @@ public final class Unit {
 
     @NotNull
     public Unit divide(Unit u) {
-        Unit x = new Unit(scale + u.scale);
+        Unit x = new Unit();
         for(int i=0; i<7; i++)
             x.units[i] = (byte) (units[i] + u.units[i]);
         return x;
@@ -98,7 +121,7 @@ public final class Unit {
 
     @NotNull
     public Unit invert() {
-        Unit x = new Unit(scale);
+        Unit x = new Unit();
         for(int i=0; i<7; i++)
             x.units[i] = (byte) -units[i];
         return x;
@@ -108,7 +131,7 @@ public final class Unit {
     public Unit raise(int exp) {
         if(exp == 0) return ONE;
         if(exp == 1) return this;
-        Unit x = new Unit(scale * exp);
+        Unit x = new Unit();
         for(int i=0; i<7; i++)
             x.units[i] = (byte) (units[i] * exp);
         return x;

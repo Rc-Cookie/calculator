@@ -9,9 +9,10 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
-import com.github.rccookie.math.Decimal;
-import com.github.rccookie.math.Fraction;
+import com.github.rccookie.math.BigDecimalMath;
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.Rational;
+import com.github.rccookie.math.Real;
 import com.github.rccookie.util.ArgsParser;
 import com.github.rccookie.util.Arguments;
 import com.github.rccookie.util.Console;
@@ -19,7 +20,7 @@ import com.github.rccookie.util.Utils;
 
 public class Calculator {
 
-    public static final Number UNSPECIFIED = new Fraction(0);
+    public static final Number UNSPECIFIED = new Rational(0);
     static final Expression UNSPECIFIED_EXPR = Expression.of(UNSPECIFIED);
 
 
@@ -28,7 +29,7 @@ public class Calculator {
             "pi", Number.PI(),
             "e", Number.E(),
             "dec", Number.ABOUT_ONE(),
-            "ans", new Fraction(42),
+            "ans", new Rational(42),
 
             "min", Function.MIN,
             "max", Function.MAX,
@@ -62,6 +63,7 @@ public class Calculator {
     private final Map<String, Number> variables = new HashMap<>();
     {
         variables.putAll(DEFAULT_VARS);
+        variables.put("precision", new Rational(BigDecimalMath.getPrecision().getPrecision() * 2L));
     }
 
     private final Map<String, Stack<Number>> localVariables = new HashMap<>();
@@ -97,6 +99,13 @@ public class Calculator {
     public void addVar(String name, Number var) {
         if(DEFAULT_VARS.containsKey(name))
             throw new IllegalArgumentException("Cannot override variable '"+name+"'");
+        if(name.equals("precision")) {
+            double p = var.toDouble();
+            if(p < 2)
+                throw new IllegalArgumentException("precision < 2");
+            BigDecimalMath.setPrecision((int) Math.max(2, p/2));
+            var = new Rational((int) p);
+        }
         variables.put(name, Arguments.checkNull(var, "var"));
     }
 
@@ -155,7 +164,7 @@ public class Calculator {
                         -----------------------------------""");
 
         Calculator calculator = new Calculator();
-        calculator.addVar("exit", new Fraction(0));
+        calculator.addVar("exit", new Rational(0));
         //noinspection InfiniteLoopStatement
         while(true) {
             System.out.print("> ");
@@ -173,7 +182,7 @@ public class Calculator {
                 evalCommand(calculator, expr.substring(1));
             else {
                 Number res = calculator.evaluateSmart(expr);
-                System.out.println((res instanceof Decimal d && !d.precise ? "\u2248 " : "= ") + res);
+                System.out.println((res instanceof Real r && !r.precise ? "\u2248 " : "= ") + res);
             }
         } catch (Throwable t) {
             String msg = t.getMessage();

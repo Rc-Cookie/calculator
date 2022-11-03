@@ -1,8 +1,13 @@
 package com.github.rccookie.math.interpreter;
 
-import com.github.rccookie.math.Decimal;
-import com.github.rccookie.math.Fraction;
+import java.math.BigInteger;
+import java.math.MathContext;
+import java.math.RoundingMode;
+
+import com.github.rccookie.math.BigDecimalMath;
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.Rational;
+import com.github.rccookie.math.Real;
 import com.github.rccookie.math.Vector;
 
 final class Functions {
@@ -51,8 +56,8 @@ final class Functions {
 
     public static Number floor(Number x) {
         return switch(x) {
-            case Fraction f -> new Fraction(Math.floorDiv(f.n, f.d));
-            case Decimal d -> new Decimal(Math.floor(d.value), d.precise);
+            case Rational f -> new Rational(f.n.divide(f.d));
+            case Real d -> new Real(d.value.round(new MathContext(1000, RoundingMode.FLOOR)), d.precise);
             case Vector v -> v.apply(Functions::floor);
             case Function f -> f.apply("floor($x)", Functions::floor);
             default -> throw new UnsupportedOperationException(""+x);
@@ -61,8 +66,8 @@ final class Functions {
 
     public static Number ceil(Number x) {
         return switch(x) {
-            case Fraction f -> new Fraction(Math.ceilDiv(f.n, f.d));
-            case Decimal d -> new Decimal(Math.ceil(d.value), d.precise);
+            case Rational f -> new Rational(f.n.add(f.d).subtract(BigInteger.ONE).divide(f.d));
+            case Real d -> new Real(d.value.round(new MathContext(1000, RoundingMode.CEILING)), d.precise);
             case Vector v -> v.apply(Functions::ceil);
             case Function f -> f.apply("ceil($x)", Functions::ceil);
             default -> throw new UnsupportedOperationException(""+x);
@@ -71,8 +76,8 @@ final class Functions {
 
     public static Number round(Number x) {
         return switch(x) {
-            case Fraction f -> new Fraction((long) ((double) f.n/f.d + 0.5));
-            case Decimal d -> new Decimal(Math.round(d.value), d.precise);
+            case Rational r -> new Rational(new Real(r).value.round(new MathContext(1000, RoundingMode.HALF_UP)).toBigInteger());
+            case Real d -> new Real(d.value.round(new MathContext(1000, RoundingMode.HALF_DOWN)), d.precise);
             case Vector v -> v.apply(Functions::round);
             case Function f -> f.apply("round($x)", Functions::round);
             default -> throw new UnsupportedOperationException(""+x);
@@ -83,96 +88,96 @@ final class Functions {
 
     public static Number sin(Number x) {
         return switch(x) {
-            case Fraction f -> sin(new Decimal(f));
-            case Decimal d -> sin(d);
+            case Rational f -> sin(new Real(f));
+            case Real d -> sin(d);
             case Vector v -> v.apply(Functions::sin);
             case Function f -> f.apply("sin($x)", Functions::sin);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
 
-    public static Number sin(Decimal x) {
-        if(x.precise && x.value == 0)
+    public static Number sin(Real x) {
+        if(x.precise && x.equals(Real.ZERO))
             return Number.ZERO();
-        return new Decimal(Math.sin(x.value), false);
+        return new Real(BigDecimalMath.sin(x.value), false);
     }
 
     public static Number cos(Number x) {
         return switch(x) {
-            case Fraction f -> cos(new Decimal(f));
-            case Decimal d -> cos(d);
+            case Rational f -> cos(new Real(f));
+            case Real d -> cos(d);
             case Vector v -> v.apply(Functions::cos);
             case Function f -> f.apply("cos($x)", Functions::cos);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
 
-    public static Number cos(Decimal x) {
-        if(x.precise && x.value == 0)
+    public static Number cos(Real x) {
+        if(x.precise && x.equals(Real.ZERO))
             return Number.ONE();
-        return new Decimal(Math.cos(x.value), false);
+        return new Real(BigDecimalMath.cos(x.value), false);
     }
 
     public static Number tan(Number x) {
         return switch(x) {
-            case Fraction f -> tan(new Decimal(f));
-            case Decimal d -> tan(d);
+            case Rational f -> tan(new Real(f));
+            case Real d -> tan(d);
             case Vector v -> v.apply(Functions::tan);
             case Function f -> f.apply("tan($x)", Functions::tan);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
 
-    public static Number tan(Decimal x) {
-        return new Decimal(Math.tan(x.value), false);
+    public static Number tan(Real x) {
+        return new Real(BigDecimalMath.sin(x.value).divide(BigDecimalMath.cos(x.value), new MathContext(1000, RoundingMode.HALF_UP)), false);
     }
 
 
 
     public static Number asin(Number x) {
         return switch(x) {
-            case Fraction f -> asin(new Decimal(f));
-            case Decimal d -> asin(d);
+            case Rational f -> asin(new Real(f));
+            case Real d -> asin(d);
             case Vector v -> v.apply(Functions::asin);
             case Function f -> f.apply("asin($x)", Functions::asin);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
 
-    public static Number asin(Decimal x) {
-        if(x.precise && x.value == 0)
+    public static Number asin(Real x) {
+        if(x.precise && x.equals(Real.ZERO))
             return Number.ZERO();
-        return new Decimal(Math.asin(x.value), false);
+        return new Real(BigDecimalMath.asin(x.value), false);
     }
 
     public static Number acos(Number x) {
         return switch(x) {
-            case Fraction f -> acos(new Decimal(f));
-            case Decimal d -> acos(d);
+            case Rational f -> acos(new Real(f));
+            case Real d -> acos(d);
             case Vector v -> v.apply(Functions::acos);
             case Function f -> f.apply("acos($x)", Functions::acos);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
 
-    public static Number acos(Decimal x) {
-        if(x.precise && x.value == 1)
+    public static Number acos(Real x) {
+        if(x.precise && x.equals(Real.ONE))
             return Number.ZERO();
-        return new Decimal(Math.sin(x.value), false);
+        return new Real(BigDecimalMath.acos(x.value), false);
     }
 
     public static Number atan(Number x) {
         return switch(x) {
-            case Fraction f -> atan(new Decimal(f));
-            case Decimal d -> atan(d);
+            case Rational f -> atan(new Real(f));
+            case Real d -> atan(d);
             case Vector v -> v.apply(Functions::atan);
             case Function f -> f.apply("atan($x)", Functions::atan);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
 
-    public static Number atan(Decimal x) {
-        return new Decimal(Math.atan(x.value), false);
+    public static Number atan(Real x) {
+        return new Real(BigDecimalMath.atan(x.value), false);
     }
 
     public static Number atan2(Number y, Number x) {
@@ -188,54 +193,54 @@ final class Functions {
         }
         if(x instanceof Vector vx)
             return vx.apply(xc -> atan2(y, xc));
-        return new Decimal(Math.atan2(y.toDouble(), x.toDouble()), false);
+        return new Real(Math.atan2(y.toDouble(), x.toDouble()), false);
     }
 
 
 
     public static Number exp(Number x) {
         return switch(x) {
-            case Decimal d -> exp(d);
-            case Fraction f -> exp(f);
+            case Real d -> exp(d);
+            case Rational f -> exp(f);
             case Vector v -> v.apply(Functions::exp);
             case Function f -> f.apply("exp($x)", Functions::exp);
             default -> throw new UnsupportedOperationException();
         };
     }
 
-    public static Number exp(Decimal x) {
-        if(x.value == 0)
-            return Decimal.one(x.precise);
-        return new Decimal(Math.exp(x.value), false);
+    public static Number exp(Real x) {
+        if(x.equals(Real.ZERO))
+            return Real.one(x.precise);
+        return new Real(BigDecimalMath.exp(x.value), false);
     }
 
-    public static Number exp(Fraction x) {
-        if(x.n == 0)
+    public static Number exp(Rational x) {
+        if(x.n.equals(BigInteger.ZERO))
             return Number.ONE();
-        return new Decimal(Math.exp(x.toDouble()), false);
+        return new Real(Math.exp(x.toDouble()), false);
     }
 
 
     public static Number ln(Number x) {
         return switch(x) {
-            case Decimal d -> ln(d);
-            case Fraction f -> ln(f);
+            case Real d -> ln(d);
+            case Rational f -> ln(f);
             case Vector v -> v.apply(Functions::ln);
             case Function f -> f.apply("ln($x)", Functions::ln);
             default -> throw new UnsupportedOperationException();
         };
     }
 
-    public static Number ln(Decimal x) {
-        if(x.value == 1)
-            return new Decimal(0, x.precise);
-        return new Decimal(Math.log(x.value), false);
+    public static Number ln(Real x) {
+        if(x.equals(Real.ONE))
+            return new Real(0, x.precise);
+        return new Real(BigDecimalMath.log(x.value), false);
     }
 
-    public static Number ln(Fraction x) {
-        if(x.n == x.d)
+    public static Number ln(Rational x) {
+        if(x.n.equals(x.d))
             return Number.ZERO();
-        return new Decimal(Math.log(x.toDouble()), false);
+        return new Real(Math.log(x.toDouble()), false);
     }
 
 
@@ -260,7 +265,7 @@ final class Functions {
     }
 
     public static Number size(Number x) {
-        return x instanceof Vector v ? new Fraction(v.size()) : Number.ONE();
+        return x instanceof Vector v ? new Rational(v.size()) : Number.ONE();
     }
 
 

@@ -7,17 +7,17 @@ import org.jetbrains.annotations.NotNull;
 
 public interface Number {
 
-    @NotNull static Number ZERO() { return Fraction.ZERO; }
-    @NotNull static Number ONE() { return Fraction.ONE; }
-    @NotNull static Number MINUS_ONE() { return Fraction.MINUS_ONE; }
-    @NotNull static Number TWO() { return Fraction.TWO; }
-    @NotNull static Number HALF() { return Fraction.HALF; }
-    @NotNull static Number ABOUT_ONE() { return Decimal.ABOUT_ONE; }
-    @NotNull static Number PI() { return Decimal.PI; }
-    @NotNull static Number E() { return Decimal.E; }
+    @NotNull static Number ZERO() { return Rational.ZERO; }
+    @NotNull static Number ONE() { return Rational.ONE; }
+    @NotNull static Number MINUS_ONE() { return Rational.MINUS_ONE; }
+    @NotNull static Number TWO() { return Rational.TWO; }
+    @NotNull static Number HALF() { return Rational.HALF; }
+    @NotNull static Number ABOUT_ONE() { return Real.ABOUT_ONE; }
+    @NotNull static Number PI() { return Real.PI; }
+    @NotNull static Number E() { return Real.E; }
 
-    @NotNull static Number RAD_TO_DEG() { return Decimal.RAD_TO_DEG; }
-    @NotNull static Number DEG_TO_RAD() { return Decimal.DEG_TO_RAD; }
+    @NotNull static Number RAD_TO_DEG() { return Real.RAD_TO_DEG; }
+    @NotNull static Number DEG_TO_RAD() { return Real.DEG_TO_RAD; }
 
 
 
@@ -26,12 +26,12 @@ public interface Number {
 
     @NotNull
     default Number add(long x) {
-        return add(new Fraction(x));
+        return add(new Rational(x));
     }
 
     @NotNull
     default Number add(double x) {
-        return add(new Decimal(x));
+        return add(new Real(x));
     }
 
     @NotNull
@@ -39,12 +39,12 @@ public interface Number {
 
     @NotNull
     default Number subtract(long x) {
-        return subtract(new Fraction(x));
+        return subtract(new Rational(x));
     }
 
     @NotNull
     default Number subtract(double x) {
-        return subtract(new Decimal(x));
+        return subtract(new Real(x));
     }
 
     @NotNull
@@ -52,12 +52,12 @@ public interface Number {
 
     @NotNull
     default Number subtractFrom(long x) {
-        return subtractFrom(new Fraction(x));
+        return subtractFrom(new Rational(x));
     }
 
     @NotNull
     default Number subtractFrom(double x) {
-        return subtractFrom(new Decimal(x));
+        return subtractFrom(new Real(x));
     }
 
     @NotNull
@@ -65,12 +65,12 @@ public interface Number {
 
     @NotNull
     default Number multiply(long x) {
-        return multiply(new Fraction(x));
+        return multiply(new Rational(x));
     }
 
     @NotNull
     default Number multiply(double x) {
-        return multiply(new Decimal(x));
+        return multiply(new Real(x));
     }
 
     @NotNull
@@ -78,12 +78,12 @@ public interface Number {
 
     @NotNull
     default Number divide(long x) {
-        return divide(new Fraction(x));
+        return divide(new Rational(x));
     }
 
     @NotNull
     default Number divide(double x) {
-        return divide(new Decimal(x));
+        return divide(new Real(x));
     }
 
     @NotNull
@@ -91,12 +91,12 @@ public interface Number {
 
     @NotNull
     default Number divideOther(long x) {
-        return divideOther(new Fraction(x));
+        return divideOther(new Rational(x));
     }
 
     @NotNull
     default Number divideOther(double x) {
-        return divideOther(new Decimal(x));
+        return divideOther(new Real(x));
     }
 
     @NotNull
@@ -104,12 +104,12 @@ public interface Number {
 
     @NotNull
     default Number raise(long x) {
-        return raise(new Fraction(x));
+        return raise(new Rational(x));
     }
 
     @NotNull
     default Number raise(double x) {
-        return raise(new Decimal(x));
+        return raise(new Real(x));
     }
 
     @NotNull
@@ -117,12 +117,12 @@ public interface Number {
 
     @NotNull
     default Number raiseOther(long x) {
-        return raiseOther(new Fraction(x));
+        return raiseOther(new Rational(x));
     }
 
     @NotNull
     default Number raiseOther(double x) {
-        return raiseOther(new Decimal(x));
+        return raiseOther(new Real(x));
     }
 
     @NotNull
@@ -194,11 +194,11 @@ public interface Number {
             return new Vector(components.toArray(new Number[0]));
         }
         if(str.contains("."))
-            return new Decimal(Double.parseDouble(str));
+            return new Real(Double.parseDouble(str));
         int i = str.indexOf('/');
         if(i == -1)
-            return new Fraction(Long.parseLong(str));
-        return new Fraction(Long.parseLong(str, 0, i, 10),
+            return new Rational(Long.parseLong(str));
+        return new Rational(Long.parseLong(str, 0, i, 10),
                 Long.parseLong(str, i+1, str.length(), 10));
     }
 
