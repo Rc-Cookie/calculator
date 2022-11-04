@@ -139,6 +139,20 @@ interface Expression extends Number {
         };
     }
 
+    static Expression named(String name, Expression expr) {
+        return new Expression() {
+            @Override
+            public Number evaluate(Calculator calculator) {
+                return expr.evaluate(calculator);
+            }
+
+            @Override
+            public String toString() {
+                return name;
+            }
+        };
+    }
+
     static Number evaluate(Number x, Calculator e) {
         return x instanceof Expression expr ? expr.evaluate(e) : x;
     }

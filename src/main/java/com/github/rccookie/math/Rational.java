@@ -2,7 +2,6 @@ package com.github.rccookie.math;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
 import java.util.Objects;
 
 import org.jetbrains.annotations.NotNull;
@@ -163,16 +162,16 @@ public class Rational implements Number {
 
     @NotNull
     public Number raise(Rational x) {
-        if(Objects.equals(x.n, BigInteger.ONE)) return ONE;
+        if(Objects.equals(x.n, x.d)) return ONE;
         if(x.n.compareTo(BigInteger.ZERO) < 0) return raise(x.negate()).invert();
         if(x.n.equals(BigInteger.ONE)) {
             if(x.d.equals(BigInteger.ONE)) return this;
             if(x.d.equals(BigInteger.TWO)) {
                 BigDecimal nd = new BigDecimal(n), dd;
-                BigDecimal sqrtN = nd.sqrt(context()), sqrtD;
-                if(sqrtN.round(context()).equals(sqrtN) && sqrtN.multiply(sqrtN, context()).equals(nd) &&
-                        (sqrtD = (dd = new BigDecimal(d)).sqrt(context())).round(context()).equals(sqrtD) &&
-                        sqrtD.multiply(sqrtD, context()).equals(dd))
+                BigDecimal sqrtN = nd.sqrt(Real.context), sqrtD;
+                if(sqrtN.round(Real.context).equals(sqrtN) && sqrtN.multiply(sqrtN, Real.context).equals(nd) &&
+                        (sqrtD = (dd = new BigDecimal(d)).sqrt(Real.context)).round(Real.context).equals(sqrtD) &&
+                        sqrtD.multiply(sqrtD, Real.context).equals(dd))
                     return new Rational(sqrtN.toBigInteger(), sqrtD.toBigInteger());
             }
         }
@@ -182,6 +181,8 @@ public class Rational implements Number {
     }
 
     public @NotNull Number raise(int x) {
+        if(x == 0) return ONE;
+        if(x < 0) return raise(-x).invert();
         return new Rational(n.pow(x), d.pow(x));
     }
 
@@ -220,7 +221,7 @@ public class Rational implements Number {
     }
     public static Rational fromDecimal(BigDecimal value) {
         Rational f = approximate(value);
-        return new BigDecimal(f.n).divide(new BigDecimal(f.d), context()).equals(value) ? f : null;
+        return new BigDecimal(f.n).divide(new BigDecimal(f.d), Real.context).equals(value) ? f : null;
     }
     public static Rational approximate(Real decimal) {
         return approximate(decimal.value);
@@ -230,9 +231,9 @@ public class Rational implements Number {
     }
     public static Rational approximate(BigDecimal value) {
         BigInteger remaining = value.toBigInteger();
-        BigDecimal x = value.subtract(new BigDecimal(remaining), context());
+        BigDecimal x = value.subtract(new BigDecimal(remaining), Real.context);
         return (Rational) (value.compareTo(BigDecimal.ZERO) < 0 ?
-                approximate01(x.negate(context())).negate() : approximate01(x)).add(new Rational(remaining));
+                approximate01(x.negate(Real.context)).negate() : approximate01(x)).add(new Rational(remaining));
     }
     private static Rational approximate01(BigDecimal x) {
         BigInteger a = BigInteger.ZERO, b = BigInteger.ONE;
@@ -241,25 +242,15 @@ public class Rational implements Number {
         BigInteger limit = new BigInteger("10000000000000");
 
         for(int i=0; i<100000 && b.compareTo(limit) <= 0 && d.compareTo(limit) <= 0; i++) {
-            BigDecimal mid = new BigDecimal(a.add(c), context())
-                    .divide(new BigDecimal(b.add(d), context()), context());
+            BigDecimal mid = new BigDecimal(a.add(c), Real.context)
+                    .divide(new BigDecimal(b.add(d), Real.context), Real.context);
             if(x.equals(mid))
                 return new Rational(a.add(c), b.add(d));
-            if(x.compareTo(mid) > 0) {
-                a = a.add(c);
-                b = b.add(d);
-            }
-            else {
-                c = c.add(a);
-                b = b.add(d);
-            }
+            if(x.compareTo(mid) > 0) a = a.add(c);
+            else c = c.add(a);
+            b = b.add(d);
         }
 
         return b.compareTo(limit) > 0 ? new Rational(c,d) : new Rational(a,b);
-    }
-
-
-    private static MathContext context() {
-        return BigDecimalMath.getPrecision();
     }
 }

@@ -118,7 +118,11 @@ class Lexer extends StepIterator<Token> {
             case '\u00B2' -> Token.SQUARE;
             case '\u00B3' -> Token.CUBE;
 
-            case '=' -> Token.EQUALS;
+            case '=' -> {
+                if(src[p] != ':') yield Token.EQUALS;
+                p++;
+                yield Token.DEFINE_REVERSE;
+            }
             case ':' -> {
                 if(src[p] != '=') yield Token.DIVIDE;
                 p++;
@@ -188,7 +192,7 @@ class Lexer extends StepIterator<Token> {
         return (c >= 'a' && c <= 'z') ||
                 (c >= 'A' && c <= 'Z') ||
                 (c >= '0' && c <= '9') ||
-                c == '$' || c == '#' || c == '\'' ||
+                c == '$' || c == '#' || c == '\'' || c == '_' ||
                 c == '\u00E4' || c == '\u00F6' || c == '\u00FC' || c == '\u00DF' || //ae, oe, ue, ss
                 c == '\u00C4' || c == '\u00D6' || c == '\u00DC'; // AE, OE, UE
     }

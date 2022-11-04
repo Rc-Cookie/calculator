@@ -25,19 +25,20 @@ sealed interface Token {
     Operator ABS       = new Operator("abs");
 
     Operator DEGREE  = new Operator("\u00B0", 1, 120, Functions::degToRad);
-    Operator PERCENT = new Operator("%", 1, 120, Functions::fromPercent);
+    Operator PERCENT = new Operator("%",      1, 120, Functions::fromPercent);
     Operator SQUARE  = new Operator("\u00B2", 1, POWER.precedence, Functions::square);
     Operator CUBE    = new Operator("\u00B3", 1, POWER.precedence, Functions::cube);
 
     Operator DEFINE           = new Operator(":=", 2, 0, Expressions::define);
+    Operator DEFINE_REVERSE   = new Operator("=:", 2, 0, Expressions::defineReverse);
     Operator LAMBDA_DEFINE    = new Operator("->", 2, 1, Expressions::lambda);
-    Operator EQUALS           = new Operator("=", 2, 5, Number::equalTo);
-    Operator LESS             = new Operator("<", 2, 5, Number::lessThan);
+    Operator EQUALS           = new Operator("=",  2, 5, Number::equalTo);
+    Operator LESS             = new Operator("<",  2, 5, Number::lessThan);
     Operator LESS_OR_EQUAL    = new Operator("<=", 2, 5, Number::lessThanOrEqual);
-    Operator GREATER          = new Operator(">", 2, 5, Number::greaterThan);
+    Operator GREATER          = new Operator(">",  2, 5, Number::greaterThan);
     Operator GREATER_OR_EQUAL = new Operator(">=", 2, 5, Number::greaterThanOrEqual);
 
-    Operator FUNCTION_CALL = new Operator("<invoke>", 2, 1000, Expressions::functionCallOrMultiply);
+    Operator FUNCTION_CALL = new Operator("<invoke>", 2, MULTIPLY.precedence, Expressions::functionCallOrMultiply);
 
 
 

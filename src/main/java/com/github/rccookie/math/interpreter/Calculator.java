@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
-import com.github.rccookie.math.BigDecimalMath;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.Real;
@@ -22,7 +21,6 @@ public class Calculator {
 
     public static final Number UNSPECIFIED = new Rational(0);
     static final Expression UNSPECIFIED_EXPR = Expression.of(UNSPECIFIED);
-
 
 
     private static final Map<String, Number> DEFAULT_VARS = Utils.map(
@@ -52,18 +50,31 @@ public class Calculator {
             "get", Function.GET,
             "size", Function.SIZE,
             "cross", Function.CROSS,
-            "toDeg", Function.RAD_TO_DEG,
-            "toRad", Function.DEG_TO_RAD,
+            "deg", Function.RAD_TO_DEG,
+            "rad", Function.DEG_TO_RAD,
             "sum", Function.SUM,
             "\u03A3", Function.SUM,
             "product", Function.PRODUCT,
             "\u03A0", Function.PRODUCT
     );
+    private static final Map<String, Number> OPTIONAL_DEFAULT_VARS = Utils.map(
+            "precision", Number.TWO(),//new Rational(BigDecimalMath.getPrecision().getPrecision() * 2L),
+            "scientific", Real.SCIENTIFIC_NOTATION ? Number.ONE() : Number.ZERO(),
+            "g", new Real(9.81, false),
+            "c", new Rational(299792458),
+            "h", new Real(6.62607015, -34, true),
+            "E", new Real(1.602176634, -19, true),
+            "m_e", new Real(9.109383701528, -31, false),
+            "N_a", new Real(6.02214076, 23, false),
+            "\u00B50", new Real(1.2566370621219, -6, false),
+            "ep_0", new Real(8.854187812813, -12, false),
+            "k", new Real(1.380649, -23, false)
+    );
 
     private final Map<String, Number> variables = new HashMap<>();
     {
         variables.putAll(DEFAULT_VARS);
-        variables.put("precision", new Rational(BigDecimalMath.getPrecision().getPrecision() * 2L));
+        variables.putAll(OPTIONAL_DEFAULT_VARS);
     }
 
     private final Map<String, Stack<Number>> localVariables = new HashMap<>();
@@ -103,9 +114,12 @@ public class Calculator {
             double p = var.toDouble();
             if(p < 2)
                 throw new IllegalArgumentException("precision < 2");
-            BigDecimalMath.setPrecision((int) Math.max(2, p/2));
+            Real.setPrecision((int) p);
+//            context = new MathContext((int) Math.max(2, p/2), RoundingMode.HALF_UP);
             var = new Rational((int) p);
         }
+        else if(name.equals("scientific"))
+            Real.SCIENTIFIC_NOTATION = !var.equals(Number.ZERO());
         variables.put(name, Arguments.checkNull(var, "var"));
     }
 
@@ -186,7 +200,7 @@ public class Calculator {
             }
         } catch (Throwable t) {
             String msg = t.getMessage();
-            System.out.println(msg != null ? msg : "Illegal expression");
+            System.err.println(msg != null ? msg : "Illegal expression");
             if(Console.getFilter().isEnabled("debug"))
                 t.printStackTrace();
         }
@@ -228,6 +242,7 @@ public class Calculator {
                      - Convert percentage to normal number when writing % symbol, i.e. 10% -> 1/10
                      - Use the variable 'ans' to refer to the previous result, or operate as if it was at the front of the expression
                      - Set the variable 'precision' to set the approximate decimal number precision (>1, default is 100)
+                     - Set the variable 'scientific' to something other than 0 to enable scientific notation output
                      - Set the variable 'exit' to a desired value to set the exit code of the program, exit with \\exit""");
             default -> System.out.println("Unknown command: '\\" + cmd + "'");
         }

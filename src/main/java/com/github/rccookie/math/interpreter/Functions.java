@@ -1,7 +1,6 @@
 package com.github.rccookie.math.interpreter;
 
 import java.math.BigInteger;
-import java.math.MathContext;
 import java.math.RoundingMode;
 
 import com.github.rccookie.math.BigDecimalMath;
@@ -57,7 +56,7 @@ final class Functions {
     public static Number floor(Number x) {
         return switch(x) {
             case Rational f -> new Rational(f.n.divide(f.d));
-            case Real d -> new Real(d.value.round(new MathContext(1000, RoundingMode.FLOOR)), d.precise);
+            case Real d -> new Real(d.value.setScale(0, RoundingMode.DOWN), d.precise);
             case Vector v -> v.apply(Functions::floor);
             case Function f -> f.apply("floor($x)", Functions::floor);
             default -> throw new UnsupportedOperationException(""+x);
@@ -67,7 +66,7 @@ final class Functions {
     public static Number ceil(Number x) {
         return switch(x) {
             case Rational f -> new Rational(f.n.add(f.d).subtract(BigInteger.ONE).divide(f.d));
-            case Real d -> new Real(d.value.round(new MathContext(1000, RoundingMode.CEILING)), d.precise);
+            case Real d -> new Real(d.value.setScale(0, RoundingMode.UP), d.precise);
             case Vector v -> v.apply(Functions::ceil);
             case Function f -> f.apply("ceil($x)", Functions::ceil);
             default -> throw new UnsupportedOperationException(""+x);
@@ -76,8 +75,8 @@ final class Functions {
 
     public static Number round(Number x) {
         return switch(x) {
-            case Rational r -> new Rational(new Real(r).value.round(new MathContext(1000, RoundingMode.HALF_UP)).toBigInteger());
-            case Real d -> new Real(d.value.round(new MathContext(1000, RoundingMode.HALF_DOWN)), d.precise);
+            case Rational r -> new Rational(new Real(r).value.setScale(0, RoundingMode.HALF_UP).toBigInteger());
+            case Real d -> new Real(d.value.setScale(0, RoundingMode.HALF_UP), d.precise);
             case Vector v -> v.apply(Functions::round);
             case Function f -> f.apply("round($x)", Functions::round);
             default -> throw new UnsupportedOperationException(""+x);
@@ -119,17 +118,7 @@ final class Functions {
     }
 
     public static Number tan(Number x) {
-        return switch(x) {
-            case Rational f -> tan(new Real(f));
-            case Real d -> tan(d);
-            case Vector v -> v.apply(Functions::tan);
-            case Function f -> f.apply("tan($x)", Functions::tan);
-            default -> throw new UnsupportedOperationException(""+x);
-        };
-    }
-
-    public static Number tan(Real x) {
-        return new Real(BigDecimalMath.sin(x.value).divide(BigDecimalMath.cos(x.value), new MathContext(1000, RoundingMode.HALF_UP)), false);
+        return sin(x).divide(cos(x));
     }
 
 
@@ -145,8 +134,9 @@ final class Functions {
     }
 
     public static Number asin(Real x) {
-        if(x.precise && x.equals(Real.ZERO))
-            return Number.ZERO();
+        if(x.equals(Real.MINUS_ONE)) return Number.PI().divide(-2);
+        if(x.equals(Real.ZERO)) return x;
+        if(x.equals(Real.ONE)) return Number.PI().divide(2);
         return new Real(BigDecimalMath.asin(x.value), false);
     }
 
@@ -161,8 +151,9 @@ final class Functions {
     }
 
     public static Number acos(Real x) {
-        if(x.precise && x.equals(Real.ONE))
-            return Number.ZERO();
+        if(x.equals(Real.ONE)) return Real.zero(x.precise);
+        if(x.equals(Real.ZERO)) return Number.PI().divide(2);
+        if(x.equals(Real.MINUS_ONE)) return Number.PI();
         return new Real(BigDecimalMath.acos(x.value), false);
     }
 

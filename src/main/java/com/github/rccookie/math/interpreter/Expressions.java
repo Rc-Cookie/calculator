@@ -39,14 +39,35 @@ final class Expressions {
     }
 
     public static Expression define(Stack<? extends Number> stack) {
-        Number expr = stack.pop();
-        Number signature = stack.pop();
+        return define(stack, false);
+    }
+
+    public static Expression defineReverse(Stack<? extends Number> stack) {
+        return define(stack, true);
+    }
+
+    private static Expression define(Stack<? extends Number> stack, boolean reverse) {
+        Number signature, expr;
+        if(reverse) {
+            signature = stack.pop();
+            expr = stack.pop();
+        }
+        else {
+            expr = stack.pop();
+            signature = stack.pop();
+        }
 
         if(signature instanceof Token.Variable v)
             return new VariableDefinition(v.name(), expr);
-        FunctionOrMultiply function = (FunctionOrMultiply) signature;
-        return new FunctionDefinition(((Token.Variable) function.functionOrNum).name(), parseFunction(function.argument, expr));
+        try {
+            FunctionOrMultiply function = (FunctionOrMultiply) signature;
+            return new FunctionDefinition(((Token.Variable) function.functionOrNum).name(), parseFunction(function.argument, expr));
+        } catch(ClassCastException e) {
+            throw new IllegalArgumentException("Illegal variable name or function signature", e);
+        }
     }
+
+
 
     public static Expression lambda(Stack<? extends Number> stack) {
         Number expr = stack.pop();
@@ -54,14 +75,18 @@ final class Expressions {
 
         if(signature instanceof Token.Variable v)
             return new Function(expr, v.name());
-        return parseFunction(signature, expr);
+        try {
+            return parseFunction(signature, expr);
+        } catch(ClassCastException e) {
+            throw new IllegalArgumentException("Illegal lambda signature");
+        }
     }
 
     private static Function parseFunction(Number paramList, Number expr) {
         Number[] params;
         if(paramList instanceof List list)
             params = list.elements();
-        else params = new Number[]{ paramList };
+        else params = new Number[]{paramList};
 
         String[] paramNames = new String[params.length];
         for (int i = 0; i < params.length; i++)
