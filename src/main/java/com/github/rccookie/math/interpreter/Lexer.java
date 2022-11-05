@@ -175,6 +175,7 @@ class Lexer extends StepIterator<Token> {
             char c = src[p++];
             if(c < '0' || c > '9')
                 throw new IllegalArgumentException("Number expected");
+            num.append(c);
         }
         while (src[p] >= '0' && src[p] <= '9')
             num.append(src[p++]);
