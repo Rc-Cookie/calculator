@@ -1,4 +1,4 @@
-package com.github.rccookie.math.interpreter;
+package com.github.rccookie.math.calculator;
 
 import java.util.Arrays;
 import java.util.Iterator;

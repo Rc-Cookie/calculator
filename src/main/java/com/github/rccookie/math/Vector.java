@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
-import com.github.rccookie.math.interpreter.Calculator;
+import com.github.rccookie.math.calculator.Calculator;
 import com.github.rccookie.util.Arguments;
 
 import org.jetbrains.annotations.NotNull;

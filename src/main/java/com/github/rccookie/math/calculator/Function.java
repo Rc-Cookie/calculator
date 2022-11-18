@@ -1,4 +1,4 @@
-package com.github.rccookie.math.interpreter;
+package com.github.rccookie.math.calculator;
 
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
@@ -11,8 +11,10 @@ public record Function(Number expr, String... paramNames) implements Expression 
 
     public static final Function ABS = new Function("abs", Number::abs);
     public static final Function SQRT = new Function("sqrt", Number::sqrt);
+    public static final Function HYPOT = new Function("hypot", Functions::hypot);
     public static final Function EXP = new Function("exp", Functions::exp);
     public static final Function LN = new Function("ln", Functions::ln);
+    public static final Function LD = new Function("ld", Functions::ld);
     public static final Function LOG = new Function("log", Functions::log);
     public static final Function FACTORIAL = new Function("factorial", Functions::factorial);
     public static final Function MIN = new Function("min", (BinaryOperator<Number>) Functions::min);

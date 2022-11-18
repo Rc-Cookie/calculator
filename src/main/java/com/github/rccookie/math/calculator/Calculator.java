@@ -1,6 +1,7 @@
-package com.github.rccookie.math.interpreter;
+package com.github.rccookie.math.calculator;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -43,9 +44,11 @@ public class Calculator {
             "atan2", Function.ATAN2,
             "abs", Function.ABS,
             "sqrt", Function.SQRT,
+            "hypot", Function.HYPOT,
             "factorial", Function.FACTORIAL,
             "exp", Function.EXP,
             "ln", Function.LN,
+            "ld", Function.LD,
             "log", Function.LOG,
             "get", Function.GET,
             "size", Function.SIZE,
@@ -191,12 +194,14 @@ public class Calculator {
             evalCommand(calculator, "exit");
             return;
         }
+        Console.mapDebug("Charset", Charset.defaultCharset(), Charset.defaultCharset().newEncoder().canEncode('\u2248'));
+        String aboutEqual = (Charset.defaultCharset().newEncoder().canEncode('\u2248') ? '\u2248' : '~') + " ";
         for(String expr : expressions.split(";")) try {
             if(expr.startsWith("\\"))
                 evalCommand(calculator, expr.substring(1));
             else {
                 Number res = calculator.evaluateSmart(expr);
-                System.out.println((res instanceof Real r && !r.precise ? "\u2248 " : "= ") + res);
+                System.out.println((res instanceof Real r && !r.precise ? aboutEqual : "= ") + res);
             }
         } catch (Throwable t) {
             String msg = t.getMessage();

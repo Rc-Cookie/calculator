@@ -1,4 +1,4 @@
-package com.github.rccookie.math.interpreter;
+package com.github.rccookie.math.calculator;
 
 import java.math.BigInteger;
 import java.math.RoundingMode;
@@ -10,6 +10,8 @@ import com.github.rccookie.math.Real;
 import com.github.rccookie.math.Vector;
 
 final class Functions {
+
+    private static final Number LN_2 = ln(new Real(2));
 
     private Functions() { }
 
@@ -234,6 +236,10 @@ final class Functions {
         return new Real(Math.log(x.toDouble()), false);
     }
 
+    public static Number ld(Number x) {
+        return ln(x).divide(LN_2);
+    }
+
 
     public static Number log(Number base, Number x) {
         return ln(x).divide(ln(base));
@@ -281,6 +287,11 @@ final class Functions {
 
     public static Number cube(Number x) {
         return x.multiply(x).multiply(x);
+    }
+
+
+    public static Number hypot(Number a, Number b) {
+        return a.multiply(a).add(b.multiply(b)).sqrt();
     }
 
 
