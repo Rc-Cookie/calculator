@@ -26,3 +26,11 @@ A simple command-line-calculator with support for several features:
 ---
 
 Currently requires Java 18 with flag `--enable-preview`. Switch pattern matching is pretty convenient :)
+
+For executing on Windows, you should first set the console charset to Windows-1512 for ² and similar to work. Then, start the program with the additional flag `-Dfile.encoding=windows-1512`. For conveniance, you may create a cmd file:
+
+```batch
+@echo off
+chcp 1512
+java -jar --enable-preview -Dfile.encoding=1512 "<path to jar>"
+```
