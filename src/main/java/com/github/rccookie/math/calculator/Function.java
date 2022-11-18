@@ -1,5 +1,6 @@
 package com.github.rccookie.math.calculator;
 
+import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
@@ -31,7 +32,7 @@ public record Function(Number expr, String... paramNames) implements Expression 
     public static final Function ATAN2 = new Function("atan2", Functions::atan2);
     public static final Function GET = new Function("get", Functions::get);
     public static final Function SIZE = new Function("size", Functions::size);
-    public static final Function CROSS = new Function("cross", Functions::cross);
+    public static final Function CROSS = new Function("cross", (Number a, Number b) -> Functions.cross(a,b));
     public static final Function RAD_TO_DEG = new Function("deg", Functions::radToDeg);
     public static final Function DEG_TO_RAD = new Function("rad", Functions::degToRad);
     public static final Function SUM = new Function(Expression.named("\u03A3", Functions::sum), "$low", "$high", "$f");
@@ -40,18 +41,22 @@ public record Function(Number expr, String... paramNames) implements Expression 
 
 
     public Function(String name, BinaryOperator<Number> function) {
-        this(Expression.named(name, e -> function.apply(
-                e.getVar("a"),
-                e.getVar("b")
+        this(Expression.named(name, c -> function.apply(
+                c.getVar("a"),
+                c.getVar("b")
         )), "a", "b");
     }
 
+    public Function(String name, BiFunction<Calculator, Number, Number> function) {
+        this(Expression.named(name, c -> function.apply(c, c.getVar("x"))), "x");
+    }
+
     public Function(String name, UnaryOperator<Number> function) {
-        this(Expression.named(name, e -> function.apply(e.getVar("x"))), "x");
+        this(Expression.named(name, c -> function.apply(c.getVar("x"))), "x");
     }
 
     public Function(String name, Function inner, UnaryOperator<Number> outer) {
-        this(Expression.named(name, e -> outer.apply(Expression.evaluate(inner.expr, e))), inner.paramNames);
+        this(Expression.named(name, c -> outer.apply(Expression.evaluate(inner.expr, c))), inner.paramNames);
     }
 
     @Override

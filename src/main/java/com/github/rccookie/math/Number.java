@@ -3,6 +3,8 @@ package com.github.rccookie.math;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.github.rccookie.math.calculator.Calculator;
+
 import org.jetbrains.annotations.NotNull;
 
 public interface Number {
@@ -204,5 +206,5 @@ public interface Number {
 
 
 
-    double toDouble();
+    double toDouble(Calculator calculator);
 }

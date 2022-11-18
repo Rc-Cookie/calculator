@@ -186,7 +186,7 @@ final class Functions {
         }
         if(x instanceof Vector vx)
             return vx.apply(xc -> atan2(y, xc));
-        return new Real(Math.atan2(y.toDouble(), x.toDouble()), false);
+        return new Real(Math.atan2(y.toDouble(null), x.toDouble(null)), false);
     }
 
 
@@ -296,46 +296,61 @@ final class Functions {
 
 
 
-    public static Number factorial(Number x) {
+    public static Number factorial(Calculator c, Number x) {
         if(x instanceof Vector v)
-            return v.apply(Functions::factorial);
-        double xd = x.toDouble();
+            return v.apply(n -> factorial(c,n));
+        double xd = x.toDouble(c);
         if(xd != (long) xd)
             throw new IllegalArgumentException("Factorial on non-integer");
         if(xd < 0)
             throw new IllegalArgumentException("Factorial on negative number");
         Number res = Number.ONE();
-        for(; x.toDouble() > 0; x = x.subtract(Number.ONE()))
+        for(; x.toDouble(c) > 0; x = x.subtract(Number.ONE()))
             res = res.multiply(x);
         return res;
     }
 
+//    public static Number factorial(Number x) {
+//        if(x instanceof Vector v)
+//            return v.apply(n -> factorial(n));
+//        if(x instanceof Expression
+//        double xd = x.toDouble(c);
+//        if(xd != (long) xd)
+//            throw new IllegalArgumentException("Factorial on non-integer");
+//        if(xd < 0)
+//            throw new IllegalArgumentException("Factorial on negative number");
+//        Number res = Number.ONE();
+//        for(; x.toDouble(c) > 0; x = x.subtract(Number.ONE()))
+//            res = res.multiply(x);
+//        return res;
+//    }
 
 
-    public static Number sum(Calculator e) {
-        return sum(e, e.getVar("$low"), e.getVar("$high"), e.getVar("$f"));
+
+    public static Number sum(Calculator c) {
+        return sum(c, c.getVar("$low"), c.getVar("$high"), c.getVar("$f"));
     }
 
-    public static Number sum(Calculator e, Number low, Number high, Number f) {
+    public static Number sum(Calculator c, Number low, Number high, Number f) {
         if(low instanceof Function lowF)
-            return lowF.apply("sum($x,"+high+","+f+")", l -> sum(e, l, high, f));
+            return lowF.apply("sum($x,"+high+","+f+")", l -> sum(c, l, high, f));
         if(high instanceof Function highF)
-            return highF.apply("sum("+low+",$x,"+f+")", h -> sum(e, low, h, f));
+            return highF.apply("sum("+low+",$x,"+f+")", h -> sum(c, low, h, f));
         if(low instanceof Vector lowV) {
             if(high instanceof Vector highV)
-                return lowV.apply(highV, (l,h) -> sum(e,l,h,f));
-            return lowV.apply(l -> sum(e, l, high, f));
+                return lowV.apply(highV, (l,h) -> sum(c,l,h,f));
+            return lowV.apply(l -> sum(c, l, high, f));
         }
         if(high instanceof Vector highV)
-            return highV.apply(h -> sum(e, low, h, f));
-        return sum(e, low, high, f instanceof Function ff ? ff : new Function(f, "$?"));
+            return highV.apply(h -> sum(c, low, h, f));
+        return sum(c, low, high, f instanceof Function ff ? ff : new Function(f, "$?"));
     }
 
-    private static Number sum(Calculator e, Number low, Number high, Function f) {
+    private static Number sum(Calculator c, Number low, Number high, Function f) {
         Number res = Number.ZERO();
         Number i = low;
-        for(double iD=low.toDouble(), highD=high.toDouble(); iD<=highD; iD++, i = i.add(Number.ONE()))
-            res = res.add(f.evaluate(e, i));
+        for(double iD=low.toDouble(c), highD=high.toDouble(c); iD<=highD; iD++, i = i.add(Number.ONE()))
+            res = res.add(f.evaluate(c, i));
         return res;
     }
 
@@ -360,11 +375,11 @@ final class Functions {
         return product(e, low, high, f instanceof Function ff ? ff : new Function(f, "$?"));
     }
 
-    private static Number product(Calculator e, Number low, Number high, Function f) {
+    private static Number product(Calculator c, Number low, Number high, Function f) {
         Number res = Number.ONE();
         Number i = low;
-        for(double iD=low.toDouble(), highD=high.toDouble(); iD<=highD; iD++, i = i.add(Number.ONE()))
-            res = res.multiply(f.evaluate(e, i));
+        for(double iD=low.toDouble(c), highD=high.toDouble(c); iD<=highD; iD++, i = i.add(Number.ONE()))
+            res = res.multiply(f.evaluate(c, i));
         return res;
     }
 }

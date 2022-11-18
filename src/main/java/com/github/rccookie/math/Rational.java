@@ -4,7 +4,10 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Objects;
 
+import com.github.rccookie.math.calculator.Calculator;
+
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class Rational implements Number {
 
@@ -73,7 +76,13 @@ public class Rational implements Number {
         return new Real(this).hashCode(); // Match with equal decimal
     }
 
+    @SuppressWarnings("DeprecatedIsStillUsed")
+    @Deprecated
     @Override
+    public double toDouble(@Nullable Calculator ignored) {
+        return toDouble();
+    }
+
     public double toDouble() {
         return new Real(this).toDouble();
     }

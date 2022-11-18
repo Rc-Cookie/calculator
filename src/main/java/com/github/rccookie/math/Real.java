@@ -4,11 +4,14 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
+import com.github.rccookie.math.calculator.Calculator;
+
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class Real implements Number {
 
-    static MathContext context = new MathContext(100, RoundingMode.HALF_UP);
+    static MathContext context = new MathContext(50, RoundingMode.HALF_UP);
 
 
 
@@ -77,7 +80,13 @@ public class Real implements Number {
         return value.hashCode();
     }
 
+    @SuppressWarnings("DeprecatedIsStillUsed")
+    @Deprecated
     @Override
+    public double toDouble(@Nullable Calculator ignored) {
+        return toDouble();
+    }
+
     public double toDouble() {
         return value.doubleValue();
     }

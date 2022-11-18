@@ -56,9 +56,9 @@ public class Vector implements Number {
     }
 
     @Override
-    public double toDouble() {
+    public double toDouble(Calculator c) {
         if(components.length == 1)
-            return components[0].toDouble();
+            return components[0].toDouble(c);
         throw new UnsupportedOperationException("Cannot convert multi-component vector to double");
     }
 

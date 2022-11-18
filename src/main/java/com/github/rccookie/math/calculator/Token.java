@@ -21,7 +21,7 @@ sealed interface Token {
     Operator DIVIDE    = new Operator("/", 2, 20, Number::divide);
     Operator NEGATE    = new Operator("~", 1, 11, Number::negate);
     Operator POWER     = new Operator("^", 2, 30, Number::raise);
-    Operator FACTORIAL = new Operator("!", 1, 40, Functions::factorial);
+    Operator FACTORIAL = new Operator("!", 1, 40, (Number x) -> Expression.named("("+x+")!", c -> Functions.factorial(c,x)));
     Operator ABS       = new Operator("abs");
 
     Operator DEGREE  = new Operator("\u00B0", 1, 120, Functions::degToRad);

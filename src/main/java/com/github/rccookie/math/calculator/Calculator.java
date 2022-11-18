@@ -61,7 +61,7 @@ public class Calculator {
             "\u03A0", Function.PRODUCT
     );
     private static final Map<String, Number> OPTIONAL_DEFAULT_VARS = Utils.map(
-            "precision", Number.TWO(),//new Rational(BigDecimalMath.getPrecision().getPrecision() * 2L),
+            "precision", new Rational(Real.getPrecision()),
             "scientific", Real.SCIENTIFIC_NOTATION ? Number.ONE() : Number.ZERO(),
             "g", new Real(9.81, false),
             "c", new Rational(299792458),
@@ -114,7 +114,7 @@ public class Calculator {
         if(DEFAULT_VARS.containsKey(name))
             throw new IllegalArgumentException("Cannot override variable '"+name+"'");
         if(name.equals("precision")) {
-            double p = var.toDouble();
+            double p = var.toDouble(this);
             if(p < 2)
                 throw new IllegalArgumentException("precision < 2");
             Real.setPrecision((int) p);
@@ -153,6 +153,8 @@ public class Calculator {
         Console.debug("Expression:");
         Console.debug(expr);
         Number ans = expr.evaluate(this);
+        //noinspection ConstantConditions
+        while(ans instanceof Expression e && (ans = e.evaluate(this)) != ans);
         lastExpr = expression;
         variables.put("ans", ans);
         return ans;
@@ -216,7 +218,7 @@ public class Calculator {
         switch(cmd) {
             case "exit" -> {
                 try {
-                    System.exit((int) calculator.getVar("exit").toDouble());
+                    System.exit((int) calculator.getVar("exit").toDouble(calculator));
                 } catch(Exception e) {
                     if(Console.getFilter().isEnabled("debug"))
                         e.printStackTrace();

@@ -119,8 +119,9 @@ interface Expression extends Number {
     }
 
     @Override
-    default double toDouble() {
-        throw new UnsupportedOperationException("Cannot convert expression to double");
+    default double toDouble(Calculator c) {
+        return evaluate(c).toDouble(c);
+        //        throw new UnsupportedOperationException("Cannot convert expression to double");
     }
 
 
