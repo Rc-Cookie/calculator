@@ -153,8 +153,8 @@ public class Calculator {
         Console.debug("Expression:");
         Console.debug(expr);
         Number ans = expr.evaluate(this);
-        //noinspection ConstantConditions
-        while(ans instanceof Expression e && (ans = e.evaluate(this)) != ans);
+        //noinspection StatementWithEmptyBody
+        while(ans instanceof Expression e && (ans = e.evaluate(this)) != e);
         lastExpr = expression;
         variables.put("ans", ans);
         return ans;
@@ -184,10 +184,13 @@ public class Calculator {
 
         Calculator calculator = new Calculator();
         calculator.addVar("exit", new Rational(0));
+        // TODO: Load settings
+
         //noinspection InfiniteLoopStatement
         while(true) {
             System.out.print("> ");
             evalInput(calculator, Console.in.readLine());
+            // TODO: Store settings
         }
     }
 
