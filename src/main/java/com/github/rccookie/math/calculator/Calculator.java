@@ -1,5 +1,6 @@
 package com.github.rccookie.math.calculator;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
+import com.github.rccookie.json.JsonObject;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.Real;
@@ -17,11 +19,17 @@ import com.github.rccookie.util.ArgsParser;
 import com.github.rccookie.util.Arguments;
 import com.github.rccookie.util.Console;
 import com.github.rccookie.util.Utils;
+import com.github.rccookie.util.config.Config;
 
 public class Calculator {
 
     public static final Number UNSPECIFIED = new Rational(0);
     static final Expression UNSPECIFIED_EXPR = Expression.of(UNSPECIFIED);
+
+    private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
+            "precision", 50,
+            "scientific", false
+    );
 
 
     private static final Map<String, Number> DEFAULT_VARS = Utils.map(
@@ -182,15 +190,30 @@ public class Calculator {
                         By RcCookie
                         -----------------------------------""");
 
+        if(System.getProperty("os.name").toLowerCase().contains("windows"))
+            checkReg();
+
         Calculator calculator = new Calculator();
         calculator.addVar("exit", new Rational(0));
-        // TODO: Load settings
+
+        Config config = Config.fromAppdataPath("Calculator");
+        try {
+            config.setDefaults(DEFAULT_SETTINGS);
+            calculator.addVar("precision", new Rational(config.getInt("precision")));
+            calculator.addVar("scientific", config.getBool("scientific") ? Number.ONE() : Number.ZERO());
+        } catch(Exception e) {
+            System.err.println("Failed to load settings");
+            if(Console.getFilter().isEnabled("debug"))
+                e.printStackTrace();
+        }
 
         //noinspection InfiniteLoopStatement
         while(true) {
             System.out.print("> ");
             evalInput(calculator, Console.in.readLine());
-            // TODO: Store settings
+
+            config.set("precision", Real.getPrecision());
+            config.set("scientific", Real.SCIENTIFIC_NOTATION);
         }
     }
 
@@ -206,7 +229,10 @@ public class Calculator {
                 evalCommand(calculator, expr.substring(1));
             else {
                 Number res = calculator.evaluateSmart(expr);
-                System.out.println((res instanceof Real r && !r.precise ? aboutEqual : "= ") + res);
+                if(res instanceof Expression)
+                    System.out.println("-> " + res);
+                else
+                    System.out.println((res instanceof Real r && !r.precise ? aboutEqual : "= ") + res);
             }
         } catch (Throwable t) {
             String msg = t.getMessage();
@@ -255,6 +281,32 @@ public class Calculator {
                      - Set the variable 'scientific' to something other than 0 to enable scientific notation output
                      - Set the variable 'exit' to a desired value to set the exit code of the program, exit with \\exit""");
             default -> System.out.println("Unknown command: '\\" + cmd + "'");
+        }
+    }
+
+    private static void checkReg() {
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{ "reg", "query", "HKCU\\SOFTWARE\\Microsoft\\Command Processor", "/v", "AutoRun" });
+            p.waitFor();
+            if(p.exitValue() != 0)
+                Console.mapDebug("Setting AutoRun reg", Runtime.getRuntime().exec(new String[] { "reg", "add", "HKCU\\SOFTWARE\\Microsoft\\Command Processor", "/v", "AutoRun", "/t", "REG_SZ", "/d", "chcp 1252 > nul"}).waitFor());
+            else try(BufferedReader in = p.inputReader()) {
+                String line = in.readLine();
+                while(!line.contains("AutoRun")) line = in.readLine();
+                String cur = line.split("\\s+", 3)[2];
+                Console.mapDebug("Current reg value", cur);
+                if(cur.contains("chcp")) {
+                    Console.debug("AutoRun charset already set");
+                    return;
+                }
+                String combined = cur + " & chcp 1252 > nul";
+                Console.mapDebug("New reg value", combined);
+                Console.mapDebug("Exit code", Runtime.getRuntime().exec(new String[] { "reg", "add", "HKCU\\SOFTWARE\\Microsoft\\Command Processor", "/v", "AutoRun", "/t", "REG_SZ", "/d", combined}).waitFor());
+            }
+        } catch(Exception e) {
+            System.err.println("Failed to access registry");
+            if(Console.getFilter().isEnabled("debug"))
+                e.printStackTrace();
         }
     }
 }

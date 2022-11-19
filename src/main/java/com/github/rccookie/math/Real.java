@@ -21,8 +21,8 @@ public class Real implements Number {
     public static final Real MINUS_ONE = new Real(-1);
 
     public static final Real ABOUT_ONE = new Real(1, false);
-    public static final Real PI = new Real(BigDecimalMath.pi(new MathContext(100)), false);
-    public static final Real E = new Real(BigDecimalMath.exp(new MathContext(100)), false);
+    public static final Real PI = new Real(BigDecimalMath.PI, false, false);
+    public static final Real E = new Real(BigDecimalMath.E, false, false);
 
     public static final Real RAD_TO_DEG = (Real) PI.divideOther(180);
     public static final Real DEG_TO_RAD = (Real) PI.divide(180);
@@ -51,8 +51,7 @@ public class Real implements Number {
         this(new BigDecimal(""+value).scaleByPowerOfTen(timesTenTo), precise);
     }
     public Real(@NotNull BigDecimal value, boolean precise) {
-        this.value = value.setScale(context.getPrecision(), RoundingMode.HALF_UP);
-        this.precise = precise;
+        this(value, precise, true);
     }
     public Real(Rational fraction) {
         this(fraction, true);
@@ -60,6 +59,10 @@ public class Real implements Number {
     Real(Rational fraction, boolean precise) {
         this.value = new BigDecimal(fraction.n).setScale(context.getPrecision(), context.getRoundingMode()).divide(new BigDecimal(fraction.d), context);
         this.precise = precise && Rational.approximate(value).equals(fraction);
+    }
+    private Real(@NotNull BigDecimal value, boolean precise, boolean round) {
+        this.value = round ? value.setScale(context.getPrecision(), RoundingMode.HALF_UP) : value;
+        this.precise = precise;
     }
 
     @Override

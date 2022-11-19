@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+java -jar --enable-preview "$(dirname -- "$0")"/math.jar "$@"
