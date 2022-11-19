@@ -2,7 +2,7 @@
 <launch4jConfig>
   <dontWrapJar>false</dontWrapJar>
   <headerType>console</headerType>
-  <jar>C:\Users\leomu\Documents\Code\Java\Projects\math\target\math-2.0.0-jar-with-dependencies.jar</jar>
+  <jar>C:\Users\leomu\Documents\Code\Java\Projects\math\out\artifacts\math_jar\math.jar</jar>
   <outfile>C:\Users\leomu\Documents\Code\Java\Projects\math\out\artifacts\math_jar\math.exe</outfile>
   <errTitle></errTitle>
   <cmdLine></cmdLine>
