@@ -76,7 +76,6 @@ public class Rational implements Number {
         return new Real(this).hashCode(); // Match with equal decimal
     }
 
-    @SuppressWarnings("DeprecatedIsStillUsed")
     @Deprecated
     @Override
     public double toDouble(@Nullable Calculator ignored) {

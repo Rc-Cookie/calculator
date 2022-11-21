@@ -19,7 +19,7 @@ record List(Number... elements) implements Expression, Iterable<Number> {
 
     @Override
     public String toString() {
-        return "List" + Arrays.toString(elements).replace('[', '(').replace(']', ')');
+        return Arrays.toString(elements).replace('[', '(').replace(']', ')');
     }
 
     @NotNull

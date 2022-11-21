@@ -71,15 +71,15 @@ public class Calculator {
     private static final Map<String, Number> OPTIONAL_DEFAULT_VARS = Utils.map(
             "precision", new Rational(Real.getPrecision()),
             "scientific", Real.SCIENTIFIC_NOTATION ? Number.ONE() : Number.ZERO(),
-            "g", new Real(9.81, false),
+            "g", new Real(9.81, false, false),
             "c", new Rational(299792458),
-            "h", new Real(6.62607015, -34, true),
-            "E", new Real(1.602176634, -19, true),
-            "m_e", new Real(9.109383701528, -31, false),
-            "N_a", new Real(6.02214076, 23, false),
-            "\u00B50", new Real(1.2566370621219, -6, false),
-            "ep_0", new Real(8.854187812813, -12, false),
-            "k", new Real(1.380649, -23, false)
+            "h", new Real(6.62607015, -34, true, false),
+            "E", new Real(1.602176634, -19, true, false),
+            "m_e", new Real(9.109383701528, -31, false, false),
+            "N_a", new Real(6.02214076, 23, false, false),
+            "\u00B50", new Real(1.2566370621219, -6, false, false),
+            "ep_0", new Real(8.854187812813, -12, false, false),
+            "k", new Real(1.380649, -23, false, false)
     );
 
     private final Map<String, Number> variables = new HashMap<>();

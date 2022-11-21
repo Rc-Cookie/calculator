@@ -48,7 +48,10 @@ public class Real implements Number {
         this(new BigDecimal(""+value), precise);
     }
     public Real(double value, int timesTenTo, boolean precise) {
-        this(new BigDecimal(""+value).scaleByPowerOfTen(timesTenTo), precise);
+        this(value, timesTenTo, precise, true);
+    }
+    public Real(double value, int timesTenTo, boolean precise, boolean round) {
+        this(new BigDecimal(""+value).scaleByPowerOfTen(timesTenTo), precise, round);
     }
     public Real(@NotNull BigDecimal value, boolean precise) {
         this(value, precise, true);
@@ -60,7 +63,10 @@ public class Real implements Number {
         this.value = new BigDecimal(fraction.n).setScale(context.getPrecision(), context.getRoundingMode()).divide(new BigDecimal(fraction.d), context);
         this.precise = precise && Rational.approximate(value).equals(fraction);
     }
-    private Real(@NotNull BigDecimal value, boolean precise, boolean round) {
+    public Real(double value, boolean precise, boolean round) {
+        this(new BigDecimal(""+value), precise, round);
+    }
+    public Real(@NotNull BigDecimal value, boolean precise, boolean round) {
         this.value = round ? value.setScale(context.getPrecision(), RoundingMode.HALF_UP) : value;
         this.precise = precise;
     }
@@ -83,7 +89,6 @@ public class Real implements Number {
         return value.hashCode();
     }
 
-    @SuppressWarnings("DeprecatedIsStillUsed")
     @Deprecated
     @Override
     public double toDouble(@Nullable Calculator ignored) {
