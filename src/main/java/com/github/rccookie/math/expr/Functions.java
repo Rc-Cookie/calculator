@@ -1,7 +1,10 @@
-package com.github.rccookie.math.calculator;
+package com.github.rccookie.math.expr;
 
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.util.function.BinaryOperator;
 
 import com.github.rccookie.math.BigDecimalMath;
 import com.github.rccookie.math.Number;
@@ -9,18 +12,53 @@ import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.Real;
 import com.github.rccookie.math.Vector;
 
-final class Functions {
+public final class Functions {
+
+    private static final String SIGMA, PI;
+    static {
+        CharsetEncoder e = Charset.defaultCharset().newEncoder();
+        SIGMA = e.canEncode('\u03A3') ? "\u03A3" : "sum";
+        PI = e.canEncode('\u03A0') ? "\u03A0" : "product";
+    }
+
+    public static final Expression.Function ABS = new HardcodedFunction("abs", Number::abs);
+    public static final Expression.Function SQRT = new HardcodedFunction("sqrt", Number::sqrt);
+    public static final Expression.Function HYPOT = new HardcodedFunction("hypot", Functions::hypot);
+    public static final Expression.Function EXP = new HardcodedFunction("exp", Functions::exp);
+    public static final Expression.Function LN = new HardcodedFunction("ln", Functions::ln);
+    public static final Expression.Function LD = new HardcodedFunction("ld", Functions::ld);
+    public static final Expression.Function LOG = new HardcodedFunction("log", Functions::log);
+    public static final Expression.Function FACTORIAL = new HardcodedFunction("factorial", Functions::factorial);
+    public static final Expression.Function MIN = new HardcodedFunction("min", (BinaryOperator<Number>) Functions::min);
+    public static final Expression.Function MAX = new HardcodedFunction("max", (BinaryOperator<Number>) Functions::max);
+    public static final Expression.Function FLOOR = new HardcodedFunction("floor", Functions::floor);
+    public static final Expression.Function CEIL = new HardcodedFunction("ceil", Functions::ceil);
+    public static final Expression.Function ROUND = new HardcodedFunction("round", Functions::round);
+    public static final Expression.Function SIN = new HardcodedFunction("sin", Functions::sin);
+    public static final Expression.Function COS = new HardcodedFunction("cos", Functions::cos);
+    public static final Expression.Function TAN = new HardcodedFunction("tan", Functions::tan);
+    public static final Expression.Function ASIN = new HardcodedFunction("asin", Functions::asin);
+    public static final Expression.Function ACOS = new HardcodedFunction("acos", Functions::acos);
+    public static final Expression.Function ATAN = new HardcodedFunction("atan", Functions::atan);
+    public static final Expression.Function ATAN2 = new HardcodedFunction("atan2", Functions::atan2);
+    public static final Expression.Function GET = new HardcodedFunction("get", Functions::get);
+    public static final Expression.Function SIZE = new HardcodedFunction("size", Functions::size);
+    public static final Expression.Function CROSS = new HardcodedFunction("cross", Functions::cross);
+    public static final Expression.Function RAD_TO_DEG = new HardcodedFunction("deg", Functions::radToDeg);
+    public static final Expression.Function DEG_TO_RAD = new HardcodedFunction("rad", Functions::degToRad);
+    public static final Expression.Function SUM = new HardcodedFunction(SIGMA, (l,p) -> sum(l,p[0], p[1], p[2]), "low", "high", "f");
+    public static final Expression.Function PRODUCT = new HardcodedFunction(PI, (l,p) -> product(l,p[0], p[1], p[2]), "low", "high", "f");
 
     private static final Number LN_2 = ln(new Real(2));
 
     private Functions() { }
 
     public static Number min(Number a, Number b) {
-        if(a instanceof Function f)
-            return f.apply("min($1,$2)", b, Functions::min);
-        if(b instanceof Function f)
-            return f.apply("min($2,$1)", a, Functions::min);
-        if(b == Calculator.UNSPECIFIED)
+        if(a instanceof Expression.Function f)
+            return f.apply("min", "min($1,$2)", b, Functions::min);
+        if(b instanceof Expression.Function f)
+            return f.apply("min", "min($2,$1)", a, Functions::min);
+        if(b == SymbolLookup.UNSPECIFIED)
             return min(a);
         Number relation = a.lessThan(b);
         return a.multiply(relation).add(b.multiply(Number.ONE().subtract(relation)));
@@ -35,11 +73,11 @@ final class Functions {
     }
 
     public static Number max(Number a, Number b) {
-        if(a instanceof Function f)
-            return f.apply("max($1,$2)", b, Functions::max);
-        if(b instanceof Function f)
-            return f.apply("max($2,$1)", a, Functions::max);
-        if(b == Calculator.UNSPECIFIED)
+        if(a instanceof Expression.Function f)
+            return f.apply("max", "max($1,$2)", b, Functions::max);
+        if(b instanceof Expression.Function f)
+            return f.apply("max", "max($2,$1)", a, Functions::max);
+        if(b == SymbolLookup.UNSPECIFIED)
             return max(a);
         Number relation = a.greaterThan(b);
         return a.multiply(relation).add(b.multiply(Number.ONE().subtract(relation)));
@@ -60,7 +98,7 @@ final class Functions {
             case Rational f -> new Rational(f.n.divide(f.d));
             case Real d -> new Real(d.value.setScale(0, RoundingMode.DOWN), d.precise);
             case Vector v -> v.apply(Functions::floor);
-            case Function f -> f.apply("floor($x)", Functions::floor);
+            case Expression.Function f -> f.apply("floor", "floor($x)", Functions::floor);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -70,7 +108,7 @@ final class Functions {
             case Rational f -> new Rational(f.n.add(f.d).subtract(BigInteger.ONE).divide(f.d));
             case Real d -> new Real(d.value.setScale(0, RoundingMode.UP), d.precise);
             case Vector v -> v.apply(Functions::ceil);
-            case Function f -> f.apply("ceil($x)", Functions::ceil);
+            case Expression.Function f -> f.apply("ceil", "ceil($x)", Functions::ceil);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -80,7 +118,7 @@ final class Functions {
             case Rational r -> new Rational(new Real(r).value.setScale(0, RoundingMode.HALF_UP).toBigInteger());
             case Real d -> new Real(d.value.setScale(0, RoundingMode.HALF_UP), d.precise);
             case Vector v -> v.apply(Functions::round);
-            case Function f -> f.apply("round($x)", Functions::round);
+            case Expression.Function f -> f.apply("round", "round($x)", Functions::round);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -92,7 +130,7 @@ final class Functions {
             case Rational f -> sin(new Real(f));
             case Real d -> sin(d);
             case Vector v -> v.apply(Functions::sin);
-            case Function f -> f.apply("sin($x)", Functions::sin);
+            case Expression.Function f -> f.apply("sin", "sin($x)", Functions::sin);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -108,7 +146,7 @@ final class Functions {
             case Rational f -> cos(new Real(f));
             case Real d -> cos(d);
             case Vector v -> v.apply(Functions::cos);
-            case Function f -> f.apply("cos($x)", Functions::cos);
+            case Expression.Function f -> f.apply("cos", "cos($x)", Functions::cos);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -130,7 +168,7 @@ final class Functions {
             case Rational f -> asin(new Real(f));
             case Real d -> asin(d);
             case Vector v -> v.apply(Functions::asin);
-            case Function f -> f.apply("asin($x)", Functions::asin);
+            case Expression.Function f -> f.apply("asin", "asin($x)", Functions::asin);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -147,7 +185,7 @@ final class Functions {
             case Rational f -> acos(new Real(f));
             case Real d -> acos(d);
             case Vector v -> v.apply(Functions::acos);
-            case Function f -> f.apply("acos($x)", Functions::acos);
+            case Expression.Function f -> f.apply("acos", "acos($x)", Functions::acos);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -164,7 +202,7 @@ final class Functions {
             case Rational f -> atan(new Real(f));
             case Real d -> atan(d);
             case Vector v -> v.apply(Functions::atan);
-            case Function f -> f.apply("atan($x)", Functions::atan);
+            case Expression.Function f -> f.apply("atan", "atan($x)", Functions::atan);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -174,11 +212,10 @@ final class Functions {
     }
 
     public static Number atan2(Number y, Number x) {
-        if(y instanceof Function f)
-            return f.apply("atan2($1,$2)", x, Functions::atan2);
-        if(x instanceof Function f)
-            //noinspection SuspiciousNameCombination
-            return f.apply("atan2($2,1)", y, Functions::atan2);
+        if(y instanceof Expression.Function f)
+            return f.apply("atan", "atan2($1,$2)", x, Functions::atan2);
+        if(x instanceof Expression.Function f)
+            return f.apply("atan", "atan2($2,1)", y, Functions::atan2);
         if(y instanceof Vector vy) {
             if(x instanceof Vector vx)
                 return vy.apply(vx, Functions::atan2);
@@ -196,7 +233,7 @@ final class Functions {
             case Real d -> exp(d);
             case Rational f -> exp(f);
             case Vector v -> v.apply(Functions::exp);
-            case Function f -> f.apply("exp($x)", Functions::exp);
+            case Expression.Function f -> f.apply("exp", "exp($x)", Functions::exp);
             default -> throw new UnsupportedOperationException();
         };
     }
@@ -219,7 +256,7 @@ final class Functions {
             case Real d -> ln(d);
             case Rational f -> ln(f);
             case Vector v -> v.apply(Functions::ln);
-            case Function f -> f.apply("ln($x)", Functions::ln);
+            case Expression.Function f -> f.apply("ln", "ln($x)", Functions::ln);
             default -> throw new UnsupportedOperationException();
         };
     }
@@ -296,16 +333,16 @@ final class Functions {
 
 
 
-    public static Number factorial(Calculator c, Number x) {
+    public static Number factorial(Number x) {
         if(x instanceof Vector v)
-            return v.apply(n -> factorial(c,n));
-        double xd = x.toDouble(c);
+            return v.apply(Functions::factorial);
+        double xd = x.toDouble();
         if(xd != (long) xd)
             throw new IllegalArgumentException("Factorial on non-integer");
         if(xd < 0)
             throw new IllegalArgumentException("Factorial on negative number");
         Number res = Number.ONE();
-        for(; x.toDouble(c) > 0; x = x.subtract(Number.ONE()))
+        for(; x.toDouble() > 0; x = x.subtract(Number.ONE()))
             res = res.multiply(x);
         return res;
     }
@@ -327,15 +364,11 @@ final class Functions {
 
 
 
-    public static Number sum(Calculator c) {
-        return sum(c, c.getVar("$low"), c.getVar("$high"), c.getVar("$f"));
-    }
-
-    public static Number sum(Calculator c, Number low, Number high, Number f) {
-        if(low instanceof Function lowF)
-            return lowF.apply("sum($x,"+high+","+f+")", l -> sum(c, l, high, f));
-        if(high instanceof Function highF)
-            return highF.apply("sum("+low+",$x,"+f+")", h -> sum(c, low, h, f));
+    public static Number sum(SymbolLookup c, Number low, Number high, Number f) {
+        if(low instanceof Expression.Function lowF)
+            return lowF.apply(SIGMA, "sum($x,"+high+","+f+")", l -> sum(c, l, high, f));
+        if(high instanceof Expression.Function highF)
+            return highF.apply(SIGMA, "sum("+low+",$x,"+f+")", h -> sum(c, low, h, f));
         if(low instanceof Vector lowV) {
             if(high instanceof Vector highV)
                 return lowV.apply(highV, (l,h) -> sum(c,l,h,f));
@@ -343,10 +376,10 @@ final class Functions {
         }
         if(high instanceof Vector highV)
             return highV.apply(h -> sum(c, low, h, f));
-        return sum(c, low, high, f instanceof Function ff ? ff : new Function(f, "$?"));
+        return sum(c, low, high, f instanceof Expression.Function ff ? ff : new HardcodedFunction("_f", "_", l -> f));
     }
 
-    private static Number sum(Calculator c, Number low, Number high, Function f) {
+    private static Number sum(SymbolLookup c, Number low, Number high, Expression.Function f) {
         Number res = Number.ZERO();
         Number i = low;
         for(double iD=low.toDouble(c), highD=high.toDouble(c); iD<=highD; iD++, i = i.add(Number.ONE()))
@@ -356,15 +389,11 @@ final class Functions {
 
 
 
-    public static Number product(Calculator e) {
-        return product(e, e.getVar("$low"), e.getVar("$high"), e.getVar("$f"));
-    }
-
-    public static Number product(Calculator e, Number low, Number high, Number f) {
-        if(low instanceof Function lowF)
-            return lowF.apply("product($x,"+high+","+f+")", l -> product(e, l, high, f));
-        if(high instanceof Function highF)
-            return highF.apply("product("+low+",$x,"+f+")", h -> product(e, low, h, f));
+    public static Number product(SymbolLookup e, Number low, Number high, Number f) {
+        if(low instanceof Expression.Function lowF)
+            return lowF.apply(PI, "product($x,"+high+","+f+")", l -> product(e, l, high, f));
+        if(high instanceof Expression.Function highF)
+            return highF.apply(PI, "product("+low+",$x,"+f+")", h -> product(e, low, h, f));
         if(low instanceof Vector lowV) {
             if(high instanceof Vector highV)
                 return lowV.apply(highV, (l,h) -> product(e,l,h,f));
@@ -372,10 +401,10 @@ final class Functions {
         }
         if(high instanceof Vector highV)
             return highV.apply(h -> product(e, low, h, f));
-        return product(e, low, high, f instanceof Function ff ? ff : new Function(f, "$?"));
+        return product(e, low, high, f instanceof Expression.Function ff ? ff : new HardcodedFunction("_f", "_", l -> f));
     }
 
-    private static Number product(Calculator c, Number low, Number high, Function f) {
+    private static Number product(SymbolLookup c, Number low, Number high, Expression.Function f) {
         Number res = Number.ONE();
         Number i = low;
         for(double iD=low.toDouble(c), highD=high.toDouble(c); iD<=highD; iD++, i = i.add(Number.ONE()))

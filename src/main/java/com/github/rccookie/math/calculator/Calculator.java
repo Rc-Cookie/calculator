@@ -3,18 +3,17 @@ package com.github.rccookie.math.calculator;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Stack;
-import java.util.stream.Collectors;
 
 import com.github.rccookie.json.JsonObject;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.Real;
+import com.github.rccookie.math.expr.Expression;
+import com.github.rccookie.math.expr.Functions;
+import com.github.rccookie.math.expr.SymbolLookup;
 import com.github.rccookie.util.ArgsParser;
 import com.github.rccookie.util.Arguments;
 import com.github.rccookie.util.Console;
@@ -22,9 +21,6 @@ import com.github.rccookie.util.Utils;
 import com.github.rccookie.util.config.Config;
 
 public class Calculator {
-
-    public static final Number UNSPECIFIED = new Rational(0);
-    static final Expression UNSPECIFIED_EXPR = Expression.of(UNSPECIFIED);
 
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
             "precision", 50,
@@ -38,35 +34,35 @@ public class Calculator {
             "dec", Number.ABOUT_ONE(),
             "ans", new Rational(42),
 
-            "min", Function.MIN,
-            "max", Function.MAX,
-            "floor", Function.FLOOR,
-            "ceil", Function.CEIL,
-            "round", Function.ROUND,
-            "sin", Function.SIN,
-            "cos", Function.COS,
-            "tan", Function.TAN,
-            "asin", Function.ASIN,
-            "acos", Function.ACOS,
-            "atan", Function.ATAN,
-            "atan2", Function.ATAN2,
-            "abs", Function.ABS,
-            "sqrt", Function.SQRT,
-            "hypot", Function.HYPOT,
-            "factorial", Function.FACTORIAL,
-            "exp", Function.EXP,
-            "ln", Function.LN,
-            "ld", Function.LD,
-            "log", Function.LOG,
-            "get", Function.GET,
-            "size", Function.SIZE,
-            "cross", Function.CROSS,
-            "deg", Function.RAD_TO_DEG,
-            "rad", Function.DEG_TO_RAD,
-            "sum", Function.SUM,
-            "\u03A3", Function.SUM,
-            "product", Function.PRODUCT,
-            "\u03A0", Function.PRODUCT
+            "min", Functions.MIN,
+            "max", Functions.MAX,
+            "floor", Functions.FLOOR,
+            "ceil", Functions.CEIL,
+            "round", Functions.ROUND,
+            "sin", Functions.SIN,
+            "cos", Functions.COS,
+            "tan", Functions.TAN,
+            "asin", Functions.ASIN,
+            "acos", Functions.ACOS,
+            "atan", Functions.ATAN,
+            "atan2", Functions.ATAN2,
+            "abs", Functions.ABS,
+            "sqrt", Functions.SQRT,
+            "hypot", Functions.HYPOT,
+            "factorial", Functions.FACTORIAL,
+            "exp", Functions.EXP,
+            "ln", Functions.LN,
+            "ld", Functions.LD,
+            "log", Functions.LOG,
+            "get", Functions.GET,
+            "size", Functions.SIZE,
+            "cross", Functions.CROSS,
+            "deg", Functions.RAD_TO_DEG,
+            "rad", Functions.DEG_TO_RAD,
+            "sum", Functions.SUM,
+            "\u03A3", Functions.SUM,
+            "product", Functions.PRODUCT,
+            "\u03A0", Functions.PRODUCT
     );
     private static final Map<String, Number> OPTIONAL_DEFAULT_VARS = Utils.map(
             "precision", new Rational(Real.getPrecision()),
@@ -82,56 +78,15 @@ public class Calculator {
             "k", new Real(1.380649, -23, false, false)
     );
 
-    private final Map<String, Number> variables = new HashMap<>();
-    {
-        variables.putAll(DEFAULT_VARS);
-        variables.putAll(OPTIONAL_DEFAULT_VARS);
-    }
-
-    private final Map<String, Stack<Number>> localVariables = new HashMap<>();
+    private final Lookup lookup = new Lookup();
     private String lastExpr = "ans";
 
     public Number getVar(String name) {
-        Stack<Number> localVars = localVariables.get(name);
-        if(localVars != null) return localVars.peek();
-
-        Number var = variables.get(name);
-        if(var == null)
-            throw new IllegalArgumentException("Unknown variable or function: '" + name + "'");
-        return var;
+        return lookup.get(name);
     }
 
-    void addLocalVar(String name, Number var) {
-        localVariables.computeIfAbsent(name, n -> new Stack<>()).push(var);
-    }
-
-    void removeLocalVar(String name) {
-        Stack<Number> localVars = localVariables.get(name);
-        if(localVars == null) {
-            Console.warn("Removing non-existent local variable");
-            return;
-        }
-        localVars.pop();
-        if(localVars.isEmpty())
-            localVariables.remove(name);
-    }
-
-
-
-    public void addVar(String name, Number var) {
-        if(DEFAULT_VARS.containsKey(name))
-            throw new IllegalArgumentException("Cannot override variable '"+name+"'");
-        if(name.equals("precision")) {
-            double p = var.toDouble(this);
-            if(p < 2)
-                throw new IllegalArgumentException("precision < 2");
-            Real.setPrecision((int) p);
-//            context = new MathContext((int) Math.max(2, p/2), RoundingMode.HALF_UP);
-            var = new Rational((int) p);
-        }
-        else if(name.equals("scientific"))
-            Real.SCIENTIFIC_NOTATION = !var.equals(Number.ZERO());
-        variables.put(name, Arguments.checkNull(var, "var"));
+    public void setVar(String name, Number var) {
+        lookup.put(name, var);
     }
 
 
@@ -147,24 +102,15 @@ public class Calculator {
     }
 
     public Number evaluate(String expression) {
-        List<Token> tokens = new ArrayList<>();
-        for(Token t : new Lexer(expression))
-            tokens.add(t);
-        Console.debug("Tokens:");
-        Console.debug(tokens);
-        Console.debug(tokens.toArray());
-        tokens = (List<Token>) new InfixConverter(tokens).toPostfix();
-        Console.debug("Postfix:");
-        Console.debug(tokens);
-        Console.debug(tokens.toArray());
-        Expression expr = new Parser().parse(tokens);
+        Expression expr = Expression.parse(expression);
         Console.debug("Expression:");
         Console.debug(expr);
-        Number ans = expr.evaluate(this);
+        Console.debug(expr.toTreeString());
+        Number ans = expr.evaluate(lookup);
         //noinspection StatementWithEmptyBody
-        while(ans instanceof Expression e && (ans = e.evaluate(this)) != e);
+        while(ans instanceof Expression e && (ans = e.evaluate(lookup)) != e);
         lastExpr = expression;
-        variables.put("ans", ans);
+        lookup.variables.put("ans", ans);
         return ans;
     }
 
@@ -180,13 +126,13 @@ public class Calculator {
                     evalCommand(calculator, "exit");
                 });
         parser.setName("""
-                        Java math interpreter - version 2.1
+                        Java math interpreter - version 2.2
                         By RcCookie""");
         parser.setDescription("Evaluate entered math expressions. Evaluate '\\help' to show expressions help");
         parser.parse(args);
 
         System.out.println("""
-                        Java math interpreter - version 2.1
+                        Java math interpreter - version 2.2
                         By RcCookie
                         -----------------------------------""");
 
@@ -194,13 +140,13 @@ public class Calculator {
             checkReg();
 
         Calculator calculator = new Calculator();
-        calculator.addVar("exit", new Rational(0));
+        calculator.setVar("exit", new Rational(0));
 
         Config config = Config.fromAppdataPath("Calculator");
         try {
             config.setDefaults(DEFAULT_SETTINGS);
-            calculator.addVar("precision", new Rational(config.getInt("precision")));
-            calculator.addVar("scientific", config.getBool("scientific") ? Number.ONE() : Number.ZERO());
+            calculator.setVar("precision", new Rational(config.getInt("precision")));
+            calculator.setVar("scientific", config.getBool("scientific") ? Number.ONE() : Number.ZERO());
         } catch(Exception e) {
             System.err.println("Failed to load settings");
             if(Console.getFilter().isEnabled("debug"))
@@ -229,7 +175,7 @@ public class Calculator {
                 evalCommand(calculator, expr.substring(1));
             else {
                 Number res = calculator.evaluateSmart(expr);
-                if(res instanceof Expression)
+                if(res instanceof Expression && !(res instanceof Expression.Numbers))
                     System.out.println("-> " + res);
                 else
                     System.out.println((res instanceof Real r && !r.precise ? aboutEqual : "= ") + res);
@@ -247,19 +193,18 @@ public class Calculator {
         switch(cmd) {
             case "exit" -> {
                 try {
-                    System.exit((int) calculator.getVar("exit").toDouble(calculator));
+                    System.exit((int) calculator.getVar("exit").toDouble(calculator.lookup));
                 } catch(Exception e) {
                     if(Console.getFilter().isEnabled("debug"))
                         e.printStackTrace();
                     System.exit(-1);
                 }
             }
-            case "vars" -> calculator.variables.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(var -> {
-                if(var.getValue() instanceof Function f) {
-                    System.out.print(var.getKey() + "(" + Arrays.stream(f.paramNames()).map(Object::toString).collect(Collectors.joining(",")) + ")");
-                    if(!DEFAULT_VARS.containsKey(var.getKey()))
-                        System.out.println(" := " + f);
-                    else System.out.println();
+            case "vars" -> calculator.lookup.variables.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(var -> {
+                if(var.getValue() instanceof Expression.Function f) {
+                    if(DEFAULT_VARS.containsKey(var.getKey()))
+                        System.out.println(var.getKey() + "(" + String.join(", ", f.paramNames()) + ")");
+                    else System.out.println(var.getKey() + " := " + f.expr());
                 }
                 else System.out.println(var.getKey() + " := " + var.getValue());
             });
@@ -307,6 +252,63 @@ public class Calculator {
             System.err.println("Failed to access registry");
             if(Console.getFilter().isEnabled("debug"))
                 e.printStackTrace();
+        }
+    }
+
+
+
+    private static class Lookup implements SymbolLookup {
+
+        private final Map<String, Number> variables = new HashMap<>();
+        {
+            variables.putAll(DEFAULT_VARS);
+            variables.putAll(OPTIONAL_DEFAULT_VARS);
+        }
+
+        private final Map<String, Stack<Number>> localVariables = new HashMap<>();
+
+        @Override
+        public Number get(String name) {
+            Stack<Number> localVars = localVariables.get(name);
+            if(localVars != null) return localVars.peek();
+
+            Number var = variables.get(name);
+            if(var == null)
+                throw new IllegalArgumentException("Unknown variable or function: '" + name + "'");
+            return var instanceof Real r ? new Real(r.value, r.precise) : var; // Round high-precision constants
+        }
+
+        @Override
+        public void pushLocal(String name, Number var) {
+            localVariables.computeIfAbsent(name, n -> new Stack<>()).push(var);
+        }
+
+        @Override
+        public void popLocal(String name) {
+            Stack<Number> localVars = localVariables.get(name);
+            if(localVars == null) {
+                Console.warn("Removing non-existent local variable");
+                return;
+            }
+            localVars.pop();
+            if(localVars.isEmpty())
+                localVariables.remove(name);
+        }
+
+        @Override
+        public void put(String name, Number var) {
+            if(DEFAULT_VARS.containsKey(name))
+                throw new IllegalArgumentException("Cannot override variable '"+name+"'");
+            if(name.equals("precision")) {
+                double p = var.toDouble(this);
+                if(p < 2)
+                    throw new IllegalArgumentException("precision < 2");
+                Real.setPrecision((int) p);
+                var = new Rational((int) p);
+            }
+            else if(name.equals("scientific"))
+                Real.SCIENTIFIC_NOTATION = !var.equals(Number.ZERO());
+            variables.put(name, Arguments.checkNull(var, "var"));
         }
     }
 }

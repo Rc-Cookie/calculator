@@ -3,7 +3,7 @@ package com.github.rccookie.math;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.github.rccookie.math.calculator.Calculator;
+import com.github.rccookie.math.expr.SymbolLookup;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -206,5 +206,9 @@ public interface Number {
 
 
 
-    double toDouble(Calculator calculator);
+    default double toDouble() {
+        return toDouble(null);
+    }
+
+    double toDouble(SymbolLookup lookup);
 }

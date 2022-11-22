@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Objects;
 
-import com.github.rccookie.math.calculator.Calculator;
+import com.github.rccookie.math.expr.SymbolLookup;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -78,10 +78,11 @@ public class Rational implements Number {
 
     @Deprecated
     @Override
-    public double toDouble(@Nullable Calculator ignored) {
+    public double toDouble(@Nullable SymbolLookup ignored) {
         return toDouble();
     }
 
+    @Override
     public double toDouble() {
         return new Real(this).toDouble();
     }

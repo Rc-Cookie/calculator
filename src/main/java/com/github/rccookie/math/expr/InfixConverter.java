@@ -1,4 +1,4 @@
-package com.github.rccookie.math.calculator;
+package com.github.rccookie.math.expr;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,11 +20,12 @@ final class InfixConverter {
         process(Token.RIGHT_PARENTHESIS);
         while(!operators.isEmpty()) {
             Token t = operators.pop();
-            if(t == Token.LEFT_PARENTHESIS)
-                throw new IllegalArgumentException("Mismatched parenthesis (missing right parenthesis)");
-            if(t == Token.LEFT_BRACKET)
-                throw new IllegalArgumentException("Mismatched bracket (missing right bracket)");
-            output.add(t);
+//            if(t == Token.LEFT_PARENTHESIS)
+//                throw new IllegalArgumentException("Mismatched parenthesis (missing right parenthesis)");
+//            if(t == Token.LEFT_BRACKET)
+//                throw new IllegalArgumentException("Mismatched bracket (missing right bracket)");
+            if(t != Token.LEFT_PARENTHESIS && t != Token.LEFT_BRACKET)
+                output.add(t);
         }
         return output;
     }

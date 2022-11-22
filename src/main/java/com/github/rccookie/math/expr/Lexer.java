@@ -1,4 +1,4 @@
-package com.github.rccookie.math.calculator;
+package com.github.rccookie.math.expr;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -152,15 +152,15 @@ class Lexer extends StepIterator<Token> {
                 String name = c + readIdentifier();
                 skipWhitespaces();
                 if(src[p] == '(') {
-                    next.push(Token.FUNCTION_CALL);
-                    yield new Token.Variable(name);
+                    next.push(Token.IMPLICIT_OPERATION);
+                    yield new Token.Symbol(name);
                 }
-                yield src[p] == '(' ? new Token.Operator(name) : new Token.Variable(name);
+                yield src[p] == '(' ? Token.Operator.functionCall(name) : new Token.Symbol(name);
             }
         };
         if(isBeforeMultiply(last) && isAfterMultiply(t)) {
             next.push(t);
-            t = Token.FUNCTION_CALL;
+            t = Token.IMPLICIT_OPERATION;
         }
         return last = t;
     }
@@ -195,14 +195,15 @@ class Lexer extends StepIterator<Token> {
                 (c >= '0' && c <= '9') ||
                 c == '$' || c == '#' || c == '\'' || c == '_' ||
                 c == '\u00E4' || c == '\u00F6' || c == '\u00FC' || c == '\u00DF' || //ae, oe, ue, ss
-                c == '\u00C4' || c == '\u00D6' || c == '\u00DC'; // AE, OE, UE
+                c == '\u00C4' || c == '\u00D6' || c == '\u00DC' ||
+                c == '\u03A3' || c == '\u03A0'; // AE, OE, UE
     }
 
     private static boolean isBeforeMultiply(Token t) {
-        return t != null && (t instanceof Token.NumberToken || t instanceof Token.Variable || BEFORE_INSERT_MULTIPLY.contains(t));
+        return t != null && (t instanceof Token.NumberToken || t instanceof Token.Symbol || BEFORE_INSERT_MULTIPLY.contains(t));
     }
 
     private static boolean isAfterMultiply(Token t) {
-        return t instanceof Token.NumberToken || t instanceof Token.Variable || (t instanceof Token.Operator o && o.isFunction()) || AFTER_INSERT_MULTIPLY.contains(t);
+        return t instanceof Token.NumberToken || t instanceof Token.Symbol || (t instanceof Token.Operator o && o.isFunction()) || AFTER_INSERT_MULTIPLY.contains(t);
     }
 }

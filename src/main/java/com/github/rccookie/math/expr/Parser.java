@@ -1,16 +1,14 @@
-package com.github.rccookie.math.calculator;
+package com.github.rccookie.math.expr;
 
 import java.util.Stack;
 
-import com.github.rccookie.math.Number;
-
-public class Parser {
+final class Parser {
 
     public Expression parse(Iterable<Token> postfix) {
-        Stack<Number> stack = new MathStack();
+        Stack<Expression> stack = new MathStack();
         for(Token t : postfix) stack.push(switch(t) {
-            case Token.NumberToken n -> n.value();
-            case Token.Variable v -> v;
+            case Token.NumberToken n -> new NumericExpression(n.value());
+            case Token.Symbol v -> v;
             case Token.Operator o -> o.apply(stack);
         });
         if(stack.size() > 1) throw new AssertionError();
@@ -18,16 +16,16 @@ public class Parser {
     }
 
 
-    static class MathStack extends Stack<Number> {
+    static class MathStack extends Stack<Expression> {
         @Override
-        public synchronized Number peek() {
+        public synchronized Expression peek() {
             if(isEmpty())
                 throw new IllegalArgumentException("Expression expected");
             return super.peek();
         }
 
         @Override
-        public synchronized Number pop() {
+        public synchronized Expression pop() {
             if(isEmpty())
                 throw new IllegalArgumentException("Expression expected");
             return super.pop();

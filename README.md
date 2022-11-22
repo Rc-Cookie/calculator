@@ -4,7 +4,7 @@
 
 ---
 
-A simple command-line-calculator with support for several features:
+A simple command-line calculator with support for several features:
 
  - Basic arithmetics (`+-*/^!`)
  - Fraction expressions and calculations
@@ -23,9 +23,11 @@ A simple command-line-calculator with support for several features:
  - Set the variable '`scientific`' to something other than `0` to enable scientific notation output
  - Set the variable '`exit`' to a desired value to set the exit code of the program, exit with `\exit`
 
+The API to parse math expressions can also be used without the calculator.
+
 ---
 
-Currently requires Java 18 with flag `--enable-preview`. Switch pattern matching is pretty convenient :)
+Currently requires Java 18 with flag `--enable-preview`. Switch pattern matching is pretty convenient for this kind of stuff :)
 
 For executing on Windows, you should first set the console charset to Windows-1512 for ² and similar to work. Then, start the program with the additional flag `-Dfile.encoding=windows-1512`. For conveniance, you may create a cmd file:
 

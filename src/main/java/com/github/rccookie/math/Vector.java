@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
-import com.github.rccookie.math.calculator.Calculator;
+import com.github.rccookie.math.expr.SymbolLookup;
 import com.github.rccookie.util.Arguments;
 
 import org.jetbrains.annotations.NotNull;
@@ -56,7 +56,7 @@ public class Vector implements Number {
     }
 
     @Override
-    public double toDouble(Calculator c) {
+    public double toDouble(SymbolLookup c) {
         if(components.length == 1)
             return components[0].toDouble(c);
         throw new UnsupportedOperationException("Cannot convert multi-component vector to double");
@@ -90,7 +90,7 @@ public class Vector implements Number {
     }
 
     public Number get(int index) {
-        return index < components.length ? components[index] : Calculator.UNSPECIFIED;
+        return index < components.length ? components[index] : SymbolLookup.UNSPECIFIED;
     }
 
     public Number get(Number index) {
