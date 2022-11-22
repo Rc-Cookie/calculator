@@ -27,11 +27,11 @@ record ImplicitOperationImpl(Expression a, Expression b)
 
     @Override
     public Number evaluate(SymbolLookup lookup) {
-        Number name = Expression.evaluate(a, lookup);
-        Number params = Expression.evaluate(this.b, lookup);
+        Number name = a.evaluate(lookup);
         if(name instanceof Expression.Function f)
-            return f.evaluate(lookup, params);
-        return name.multiply(params);
+            return f.evaluate(lookup, b.evaluate(lookup));
+        if(name.equals(Number.ZERO())) return name;
+        return name.multiply(b.evaluate(lookup));
     }
 
     @Override

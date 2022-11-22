@@ -176,7 +176,7 @@ public class Calculator {
             else {
                 Number res = calculator.evaluateSmart(expr);
                 if(res instanceof Expression && !(res instanceof Expression.Numbers))
-                    System.out.println("-> " + res);
+                    System.out.println(res);
                 else
                     System.out.println((res instanceof Real r && !r.precise ? aboutEqual : "= ") + res);
             }
