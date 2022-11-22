@@ -151,11 +151,11 @@ public interface Number {
     Number greaterThan(Number x);
 
     default Number lessThanOrEqual(Number x) {
-        return greaterThan(x).negate();
+        return ONE().subtract(greaterThan(x));
     }
 
     default Number greaterThanOrEqual(Number x) {
-        return lessThan(x).negate();
+        return ONE().subtract(lessThan(x));
     }
 
 
