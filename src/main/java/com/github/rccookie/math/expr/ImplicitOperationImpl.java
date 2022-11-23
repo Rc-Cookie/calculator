@@ -30,8 +30,8 @@ record ImplicitOperationImpl(Expression a, Expression b)
         Number name = a.evaluate(lookup);
         if(name instanceof Expression.Function f)
             return f.evaluate(lookup, b.evaluate(lookup));
-        if(name.equals(Number.ZERO())) return name;
-        return name.multiply(b.evaluate(lookup));
+        return a.multiply(b).evaluate(lookup);
+//        return name.multiply(b.evaluate(lookup));
     }
 
     @Override

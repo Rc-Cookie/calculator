@@ -2,6 +2,7 @@ package com.github.rccookie.math.expr;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Vector;
@@ -13,6 +14,26 @@ final class Builder implements Expression {
     Builder(Expression first, Expression second) {
         elements.add(first);
         elements.add(second);
+    }
+
+    static Expression append(Stack<? extends Expression> stack) {
+        Expression element = stack.pop();
+        Expression elements = stack.pop();
+        if(elements instanceof Builder b) {
+            b.append(element);
+            return b;
+        }
+        return new Builder(elements, element);
+    }
+
+    static Expression buildList(Stack<? extends Expression> stack) {
+        Expression x = stack.pop();
+        return x instanceof Builder b ? b.buildList() : x;
+    }
+
+    static Expression buildVector(Stack<? extends Expression> stack) {
+        Expression x = stack.pop();
+        return x instanceof Builder b ? b.buildVector() : x;
     }
 
     void append(Expression x) {

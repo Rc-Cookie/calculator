@@ -16,6 +16,8 @@ A simple command-line calculator with support for several features:
  - Function declarations: declare using `:=`, i.e. `f(x) := 2x`
  - Anonymous function declarations aka lambdas: declare using ->, i.e. `f := x -> 2x`
  - First class functions: functions (particularly lambdas) may be passed to other functions
+ - Function arithmetics: operating on functions like numbers will create derived functions
+ - Function compositions: Using `f(g)` or `f g` defines the composition "f after g"
  - Convert degrees to radians when writing `°` symbol, i.e. `180°` -> pi (may not be supported due to some terminals not properly parsing '°' character)
  - Convert percentage to normal number when writing `%` symbol, i.e. `10%` -> `1/10`
  - Use the variable '`ans`' to refer to the previous result, or operate as if it was at the front of the expression

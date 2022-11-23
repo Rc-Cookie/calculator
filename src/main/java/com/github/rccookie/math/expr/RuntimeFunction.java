@@ -4,14 +4,17 @@ import java.util.Arrays;
 
 import com.github.rccookie.math.Number;
 
-record RuntimeFunction(String name, boolean lambda, Expression expr, String[] paramNames)
+record RuntimeFunction(Expression expr, String... paramNames)
         implements AbstractFunction {
 
     @Override
     public String toString() {
-        return (paramNames.length == 1 ? paramNames[0] : '('+String.join(", ", paramNames)+')')+" -> "+expr;
-//        String params = lambda && paramNames.length == 1 ? paramNames[0] : '('+String.join(", ", paramNames)+')';
-//        return lambda ? params + " -> " + expr : name + params + " := " + expr;
+        return (paramNames.length == 1 ? paramNames[0] : '('+String.join(",", paramNames)+')')+" -> "+expr;
+    }
+
+    @Override
+    public String name() {
+        return "function";
     }
 
     @Override
@@ -36,7 +39,7 @@ record RuntimeFunction(String name, boolean lambda, Expression expr, String[] pa
                 results[i] = Expression.of(evaluateFunction(lookup, l.evaluate(i, lookup)));
             return new NumbersImpl(results);
         }
-        throw new ArithmeticException("Too many arguments (" + l.size() + ") applied to function"+(lambda?"":" "+name)+", expected " + paramNames.length);
+        throw new ArithmeticException("Too many arguments (" + l.size() + ") applied to operation, expected " + paramNames.length);
     }
 
     private Number evaluateFunction(SymbolLookup lookup, Number... params) {
@@ -64,23 +67,29 @@ record RuntimeFunction(String name, boolean lambda, Expression expr, String[] pa
 
 
 
-    static RuntimeFunction definition(String name, Expression expr, String... paramNames) {
-        return new RuntimeFunction(name, false, expr, paramNames);
-    }
-
-    static RuntimeFunction lambda(Expression expr, String... paramNames) {
-        return new RuntimeFunction(null, true, expr, paramNames);
-    }
-
-    static RuntimeFunction lambda(Expression signature, Expression body) {
+    static RuntimeFunction parseLambda(Expression signature, Expression body) {
         if(signature instanceof Symbol s) // x -> ...
-            return lambda(body, s.name());
+            return new RuntimeFunction(body, s.name());
         if(!(signature instanceof Numbers n))
             throw new IllegalArgumentException("Illegal lambda signature");
-        return lambda(body, n.stream().map(e -> {
+        return new RuntimeFunction(body, n.stream().map(e -> {
             if(!(e instanceof Symbol s))
                 throw new IllegalArgumentException("Illegal lambda signature");
             return s.name();
         }).toArray(String[]::new)); // (a,b,c) -> ...
+    }
+
+    static RuntimeFunction parseDefinition(Expression signature, Expression body) {
+        if(!(signature instanceof ImplicitOperation o))
+            throw new IllegalArgumentException("Invalid function signature");
+        if(o.b() instanceof Symbol s)
+            return new RuntimeFunction(body, s.name()); // f x := ...
+        if(!(o.b() instanceof Numbers n))
+            throw new IllegalArgumentException("Invalid function signature");
+        return new RuntimeFunction(body, n.stream().map(e -> { // f(a,b,c) := ...
+            if(!(e instanceof Symbol s))
+                throw new IllegalArgumentException("Invalid function signature");
+            return s.name();
+        }).toArray(String[]::new));
     }
 }

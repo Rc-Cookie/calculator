@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -19,7 +18,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * An expression is a special type of number than has to be evaluated to be
  * a normal number. This evaluation process may include variable references
- * and function calls, thus a lookup context is required.
+ * and operation calls, thus a lookup context is required.
  */
 public interface Expression extends Number {
 
@@ -29,7 +28,7 @@ public interface Expression extends Number {
     static Expression ZERO() { return of(Number.ZERO()); }
 
     /**
-     * An expression indicating that the function parameter was not specified,
+     * An expression indicating that the operation parameter was not specified,
      * with an effective value of 0.
      */
     static Expression UNSPECIFIED() { return SymbolLookup.UNSPECIFIED_EXPR; }
@@ -54,13 +53,13 @@ public interface Expression extends Number {
     /**
      * Returns the operands this expression operates on when evaluated, if any.
      *
-     * @return The operands thes expression operates on, if any
+     * @return The operands this expression operates on, if any
      */
     Expression[] operands();
 
     /**
      * Returns the name of this operation, for example '+' or '*' or the name of the
-     * function being called. The name should not have to do with the actual parameters
+     * operation being called. The name should not have to do with the actual parameters
      * of the operation.
      *
      * @return A name for the expression
@@ -73,120 +72,104 @@ public interface Expression extends Number {
 
     @Override
     default @NotNull Expression add(Number x) {
-        return apply("+", "$1 + $2", x, Number::add);
+        return new SimpleBinaryOperation("+", "$1 + $2", this, x, Number::add);
     }
 
     @Override
     @NotNull
     default Expression subtract(Number x) {
-        return apply("-", "$1 - $2", x, Number::subtract);
+        return new SimpleBinaryOperation("-", "$1 - $2", this, x, Number::subtract);
     }
 
     @Override
     @NotNull
     default Expression subtractFrom(Number x) {
-        return applyInverse("-", "$2 - $1", x, Number::subtract);
+        return new SimpleBinaryOperation("-", "$2 - $1", this, x, Number::subtractFrom);
     }
 
     @Override
     @NotNull
     default Expression multiply(Number x) {
-        return apply((a,b) -> new OptimizedBinaryOperation("*", "($1) * ($2)", a, b, Number.ZERO(), Number::multiply), x);
+        return new OptimizedBinaryOperation(
+                new SimpleBinaryOperation("*", "($1) * ($2)", this, x, Number::multiply),
+                Number.ZERO()
+        );
     }
 
     @Override
     @NotNull
     default Expression divide(Number x) {
-        return apply("/", "($1) / ($2)", x, Number::divide); // Don't optimize in case x evaluates to 0
+        return new SimpleBinaryOperation("/", "($1) / ($2)", this, x, Number::divide);
     }
 
     @Override
     @NotNull
     default Expression divideOther(Number x) {
-        return applyInverse("/", "($1) / ($2)", x, Number::divide);
+        return new SimpleBinaryOperation("/", "($2) / ($1)", this, x, Number::divideOther);
     }
 
     @Override
     @NotNull
     default Expression raise(Number x) {
-        return apply((a,b) -> new OptimizedBinaryOperation("^", "($1)^($2)", a, b, Number.ZERO(), Number::raise), x);
+        return new OptimizedBinaryOperation(
+                new SimpleBinaryOperation("^", "($1)^($2)", this, x, Number::raise),
+                Number.ZERO()
+        );
     }
 
     @Override
     @NotNull
     default Expression raiseOther(Number x) {
-        return apply((b,a) -> new OptimizedBinaryOperation("^", "($1)^($2)", a, b, Number.ZERO(), Number::raise), x);
+        return new OptimizedBinaryOperation(
+                new SimpleBinaryOperation("^", "($2)^($1)", this, x, Number::raiseOther),
+                Number.ZERO()
+        );
     }
 
     @Override
     @NotNull
     default Expression abs() {
-        return apply("abs", "|$x|", Number::abs);
+        return new SimpleUnaryOperation("abs", "|$x|", this, Number::abs);
     }
 
     @Override
     @NotNull
     default Expression negate() {
-        return apply("negate", "-($x)", Number::negate);
+        return new SimpleUnaryOperation("negate", "-($x)", this, Number::negate);
     }
 
     @Override
     @NotNull
     default Expression invert() {
-        return apply("invert", "1/($y)", Number::invert);
+        return new SimpleUnaryOperation("invert", "1/($y)", this, Number::invert);
     }
 
     @Override
     @NotNull
     default Expression equalTo(Number x) {
-        return apply("=", "$1 = $2", x, Number::equalTo);
+        return new SimpleBinaryOperation("=", "$1 = $2", this, x, Number::equalTo);
     }
 
     @Override
     @NotNull
     default Expression lessThan(Number x) {
-        return apply("<", "$1 < $2", x, Number::lessThan);
+        return new SimpleBinaryOperation("<", "$1 < $2", this, x, Number::lessThan);
     }
 
     @Override
     default Expression lessThanOrEqual(Number x) {
-        return apply("<=", "$1 <= $2", x, Number::lessThanOrEqual);
+        return new SimpleBinaryOperation("<=", "$1 <= $2", this, x, Number::lessThanOrEqual);
     }
 
     @Override
     @NotNull
     default Expression greaterThan(Number x) {
-        return apply(">", "$1 > $2", x, Number::greaterThan);
+        return new SimpleBinaryOperation(">", "$1 > $2", this, x, Number::greaterThan);
     }
 
     @Override
     default Expression greaterThanOrEqual(Number x) {
-        return apply(">=", "$1 >= $2", x, Number::greaterThanOrEqual);
-    }
-
-
-    default Expression apply(String name, String format, Number b, BinaryOperator<Number> function) {
-        return apply((_a,_b) -> new SimpleBinaryOperation(name, format, _a, _b, function), b);
-    }
-
-    default Expression applyInverse(String name, String format, Number a, BinaryOperator<Number> function) {
-        return applyInverse((_a,_b) -> new SimpleBinaryOperation(name, format, _a, _b, function), a);
-    }
-
-    default Expression apply(String name, String format, UnaryOperator<Number> function) {
-        return apply(x -> new SimpleUnaryOperation(name, format, x, function));
-    }
-
-    default Expression apply(BiFunction<Expression,Expression,BinaryOperation> operation, Number b) {
-        return operation.apply(this, Expression.of(b));
-    }
-
-    default Expression applyInverse(BiFunction<Expression,Expression,BinaryOperation> operation, Number a) {
-        return operation.apply(Expression.of(a), this);
-    }
-
-    default Expression apply(java.util.function.Function<Expression,UnaryOperation> operation) {
-        return operation.apply(this);
+        return new SimpleBinaryOperation(">=", "$1 >= $2", this, x, Number::greaterThanOrEqual);
     }
 
     @Override
@@ -274,7 +257,7 @@ public interface Expression extends Number {
      * An expression that represents a named symbol. The actual value depends on
      * the lookup context which directly corresponds to the value when evaluated.
      * The evaluated value is not necessarily numeric, for example it could also
-     * be a function.
+     * be an operation.
      */
     interface Symbol extends Expression {
         @Override
@@ -299,8 +282,7 @@ public interface Expression extends Number {
     /**
      * An operation on one or more numbers (which may intern again be expressions).
      */
-    interface Operation extends Expression {
-    }
+    interface Operation extends Expression { }
 
     /**
      * An operation on two numbers (which may intern again be expressions).
@@ -339,10 +321,10 @@ public interface Expression extends Number {
 
     /**
      * An operation that describes an implicit operation between two operands, which
-     * is if no operand is specified. This particularly includes function calls, but
+     * is if no operand is specified. This particularly includes operation calls, but
      * also implicit multiplication. The exact type can only be determined when evaluated
-     * in a specific context. For example, <code>f(x)</code> may be evaluated as function
-     * call if <code>f</code> describes a function, or as multiplication if it just
+     * in a specific context. For example, <code>f(x)</code> may be evaluated as operation
+     * call if <code>f</code> describes an operation, or as multiplication if it just
      * describes a numeric value.
      */
     interface ImplicitOperation extends BinaryOperation {
@@ -350,7 +332,7 @@ public interface Expression extends Number {
     }
 
     /**
-     * A list of multiple numbers, particularly to be passed as parameter to function calls.
+     * A list of multiple numbers, particularly to be passed as parameter to operation calls.
      */
     interface Numbers extends Expression, Iterable<Expression> {
 
@@ -378,33 +360,112 @@ public interface Expression extends Number {
         Stream<Expression> stream();
 
         @Override
-        default BinaryOperation apply(BiFunction<Expression, Expression, BinaryOperation> operation, Number b) {
+        @NotNull
+        default Expression add(Number x) {
             throw new ArithmeticException("List arithmetics");
         }
 
         @Override
-        default BinaryOperation applyInverse(BiFunction<Expression, Expression, BinaryOperation> operation, Number a) {
+        @NotNull
+        default Expression subtract(Number x) {
             throw new ArithmeticException("List arithmetics");
         }
 
         @Override
-        default UnaryOperation apply(java.util.function.Function<Expression, UnaryOperation> operation) {
+        @NotNull
+        default Expression subtractFrom(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression multiply(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression divide(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression divideOther(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression raise(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression raiseOther(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression abs() {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression negate() {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression invert() {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression equalTo(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression lessThan(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default Expression lessThanOrEqual(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        @NotNull
+        default Expression greaterThan(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default Expression greaterThanOrEqual(Number x) {
             throw new ArithmeticException("List arithmetics");
         }
     }
 
     /**
      * An expression that requires parameters to be evaluated. This differs from
-     * {@link ImplicitOperation} in that it represents the unevaluated function expression.
-     * A function call would be represented as an implicit operation where the first operand
+     * {@link ImplicitOperation} in that it represents the unevaluated operation expression.
+     * An operation call would be represented as an implicit operation where the first operand
      * is a {@link Function}.
-     * <p>Evaluating a function with the normal {@link #evaluate(SymbolLookup)} method
-     * will simply return the function itself. Use {@link #evaluate(SymbolLookup, Number)}
+     * <p>Evaluating a operation with the normal {@link #evaluate(SymbolLookup)} method
+     * will simply return the operation itself. Use {@link #evaluate(SymbolLookup, Number)}
      * instead to specify the parameters.</p>
      *
      * @see Numbers
      */
-    interface Function extends Expression {
+    interface Function extends Operation {
         @Override
         String name();
         int paramCount();
@@ -418,15 +479,54 @@ public interface Expression extends Number {
         }
 
         /**
-         * Evaluates the function with the given parameters. The parameters should
+         * Evaluates the operation with the given parameters. The parameters should
          * already be evaluated, otherwise they will be treated as expressions in
          * the calculation.
          *
          * @param lookup The lookup context to use
-         * @param params The function parameters. Either a single number or an instance
+         * @param params The operation parameters. Either a single number or an instance
          *               of {@link Numbers}
-         * @return The result of the function
+         * @return The result of the operation
          */
         Number evaluate(SymbolLookup lookup, Number params);
+
+        /**
+         * Returns a new function that represents first evaluating this function,
+         * then applying the specified operator to the result and the given argument.
+         *
+         * @param name The name for the derived function
+         * @param format The toString() format, using $1 and $2
+         * @param b The second parameter for the operator
+         * @param operator The operator to apply to the result of the function and the
+         *                 specified parameter
+         * @return A new function representing the function described above
+         */
+        Function derive(String name, String format, Expression b, BinaryOperator<Number> operator);
+
+        /**
+         * Returns a new function that represents first evaluating this function,
+         * then applying the specified operator to the result and the given argument.
+         *
+         * @param name The name for the derived function
+         * @param format The toString() format, using $1 and $2
+         * @param b The second parameter for the operator
+         * @param operator The operator to apply to the result of the function and the
+         *                 specified parameter
+         * @return A new function representing the function described above
+         */
+        default Function derive(String name, String format, Number b, BinaryOperator<Number> operator) {
+            return derive(name, format, Expression.of(b), operator);
+        }
+
+        /**
+         * Returns a new function that represents first evaluating this function,
+         * then applying the specified operator to the result.
+         *
+         * @param name The name for the derived function
+         * @param format The toString() format, using $x
+         * @param operator The operator to apply to the result of the function
+         * @return A new function representing the function described above
+         */
+        Function derive(String name, String format, UnaryOperator<Number> operator);
     }
 }

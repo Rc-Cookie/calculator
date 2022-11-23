@@ -10,11 +10,11 @@ import com.github.rccookie.math.Real;
 
 sealed interface Token {
 
-    Operator COMMA             = Operator.noFunction(",", -50,  Expressions::append);
+    Operator COMMA             = Operator.noFunction(",", -50,  Builder::append);
     Operator LEFT_PARENTHESIS  = Operator.tokenOnly("(", -99);
-    Operator RIGHT_PARENTHESIS = Operator.noFunction(")", -100, Expressions::buildList);
+    Operator RIGHT_PARENTHESIS = Operator.noFunction(")", -100, Builder::buildList);
     Operator LEFT_BRACKET      = Operator.tokenOnly("[", -99);
-    Operator RIGHT_BRACKET     = Operator.noFunction("]", -100, Expressions::buildVector);
+    Operator RIGHT_BRACKET     = Operator.noFunction("]", -100, Builder::buildVector);
 
     Operator PLUS      = new Operator("+", 10, Expression::add);
     Operator MINUS     = new Operator("-", 10, Expression::subtract);
@@ -32,14 +32,14 @@ sealed interface Token {
 
     Operator DEFINE           = new Operator(":=", 0, FunctionDefinition::definition);
     Operator DEFINE_REVERSE   = new Operator("=:", 0, (b,a) -> FunctionDefinition.definition(a,b));
-    Operator LAMBDA_DEFINE    = new Operator("->", 1, (a,b) -> RuntimeFunction.lambda(a,b));
+    Operator LAMBDA_DEFINE    = new Operator("->", 1, RuntimeFunction::parseLambda);
     Operator EQUALS           = new Operator("=", 5, Expression::equalTo);
     Operator LESS             = new Operator("<", 5, Expression::lessThan);
     Operator LESS_OR_EQUAL    = new Operator("<=", 5, Expression::lessThanOrEqual);
     Operator GREATER          = new Operator(">", 5, Expression::greaterThan);
     Operator GREATER_OR_EQUAL = new Operator(">=", 5, Expression::greaterThanOrEqual);
 
-    Operator IMPLICIT_OPERATION = new Operator("<implicit>", MULTIPLY.precedence, ImplicitOperationImpl::new);
+    Operator IMPLICIT_OPERATION = new Operator("", MULTIPLY.precedence, ImplicitOperationImpl::new);
 
 
 

@@ -107,8 +107,6 @@ public class Calculator {
         Console.debug(expr);
         Console.debug(expr.toTreeString());
         Number ans = expr.evaluate(lookup);
-        //noinspection StatementWithEmptyBody
-        while(ans instanceof Expression e && (ans = e.evaluate(lookup)) != e);
         lastExpr = expression;
         lookup.variables.put("ans", ans);
         return ans;
@@ -126,13 +124,13 @@ public class Calculator {
                     evalCommand(calculator, "exit");
                 });
         parser.setName("""
-                        Java math interpreter - version 2.2
+                        Java math interpreter - version 2.3
                         By RcCookie""");
         parser.setDescription("Evaluate entered math expressions. Evaluate '\\help' to show expressions help");
         parser.parse(args);
 
         System.out.println("""
-                        Java math interpreter - version 2.2
+                        Java math interpreter - version 2.3
                         By RcCookie
                         -----------------------------------""");
 
@@ -202,9 +200,10 @@ public class Calculator {
             }
             case "vars" -> calculator.lookup.variables.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(var -> {
                 if(var.getValue() instanceof Expression.Function f) {
-                    if(DEFAULT_VARS.containsKey(var.getKey()))
-                        System.out.println(var.getKey() + "(" + String.join(", ", f.paramNames()) + ")");
-                    else System.out.println(var.getKey() + " := " + f.expr());
+                    System.out.print(var.getKey() + "(" + String.join(",", f.paramNames()) + ")");
+                    if(!DEFAULT_VARS.containsKey(var.getKey()))
+                        System.out.println(" := " + f.expr());
+                    else System.out.println();
                 }
                 else System.out.println(var.getKey() + " := " + var.getValue());
             });

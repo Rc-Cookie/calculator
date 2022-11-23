@@ -64,29 +64,29 @@ public class Vector implements Number {
 
     @Override
     public @NotNull Vector equalTo(Number x) {
-        return x instanceof Vector v ? equalTo(v) : apply(c -> c.equalTo(x));
+        return x instanceof Vector v ? equalTo(v) : derive(c -> c.equalTo(x));
     }
 
     public Vector equalTo(Vector x) {
-        return apply(x, Number::equalTo);
+        return derive(x, Number::equalTo);
     }
 
     @Override
     public @NotNull Vector lessThan(Number x) {
-        return x instanceof Vector v ? lessThan(v) : apply(c -> c.lessThan(x));
+        return x instanceof Vector v ? lessThan(v) : derive(c -> c.lessThan(x));
     }
 
     public Vector lessThan(Vector x) {
-        return apply(x, Number::lessThan);
+        return derive(x, Number::lessThan);
     }
 
     @Override
     public @NotNull Vector greaterThan(Number x) {
-        return x instanceof Vector v ? greaterThan(v) : apply(c -> c.greaterThan(x));
+        return x instanceof Vector v ? greaterThan(v) : derive(c -> c.greaterThan(x));
     }
 
     public Vector greaterThan(Vector x) {
-        return apply(x, Number::greaterThan);
+        return derive(x, Number::greaterThan);
     }
 
     public Number get(int index) {
@@ -103,7 +103,7 @@ public class Vector implements Number {
     }
 
     public Vector get(Vector indices) {
-        return indices.apply(this, ($,i) -> get(i));
+        return indices.derive(this, ($, i) -> get(i));
     }
 
     public Number x() {
@@ -128,38 +128,38 @@ public class Vector implements Number {
 
     @Override
     public @NotNull Vector add(Number x) {
-        return x instanceof Vector v ? add(v) : apply(c -> c.add(x));
+        return x instanceof Vector v ? add(v) : derive(c -> c.add(x));
     }
 
     @NotNull
     public Vector add(Vector x) {
-        return apply(x, Number::add);
+        return derive(x, Number::add);
     }
 
     @Override
     public @NotNull Vector subtract(Number x) {
-        return x instanceof Vector v ? subtract(v) : apply(c -> c.subtract(x));
+        return x instanceof Vector v ? subtract(v) : derive(c -> c.subtract(x));
     }
 
     @NotNull
     public Vector subtract(Vector x) {
-        return apply(x, Number::subtract);
+        return derive(x, Number::subtract);
     }
 
     @Override
     public @NotNull Vector subtractFrom(Number x) {
-        return x instanceof Vector v ? subtractFrom(v) : apply(c -> c.subtractFrom(x));
+        return x instanceof Vector v ? subtractFrom(v) : derive(c -> c.subtractFrom(x));
     }
 
     @NotNull
     public Vector subtractFrom(Vector x) {
-        return apply(x, Number::subtractFrom);
+        return derive(x, Number::subtractFrom);
     }
 
     @Override
     @NotNull
     public Number multiply(Number x) {
-        return x instanceof Vector v ? dot(v) : apply(c -> c.multiply(x));
+        return x instanceof Vector v ? dot(v) : derive(c -> c.multiply(x));
     }
 
     @NotNull
@@ -172,7 +172,7 @@ public class Vector implements Number {
 
     @NotNull
     public Number multiplyComponentwise(Vector x) {
-        return apply(x, Number::multiply);
+        return derive(x, Number::multiply);
     }
 
     @NotNull
@@ -188,42 +188,42 @@ public class Vector implements Number {
 
     @Override
     public @NotNull Vector divide(Number x) {
-        return x instanceof Vector v ? divide(v) : apply(c -> c.divide(x));
+        return x instanceof Vector v ? divide(v) : derive(c -> c.divide(x));
     }
 
     @NotNull
     public Vector divide(Vector x) {
-        return apply(x, Number::divide);
+        return derive(x, Number::divide);
     }
 
     @Override
     public @NotNull Vector divideOther(Number x) {
-        return x instanceof Vector v ? divideOther(v) : apply(c -> c.divideOther(x));
+        return x instanceof Vector v ? divideOther(v) : derive(c -> c.divideOther(x));
     }
 
     @NotNull
     public Vector divideOther(Vector x) {
-        return apply(x, Number::divideOther);
+        return derive(x, Number::divideOther);
     }
 
     @Override
     public @NotNull Vector raise(Number x) {
-        return x instanceof Vector v ? raise(v) : apply(c -> c.raise(x));
+        return x instanceof Vector v ? raise(v) : derive(c -> c.raise(x));
     }
 
     @NotNull
     public Vector raise(Vector x) {
-        return apply(x, Number::raise);
+        return derive(x, Number::raise);
     }
 
     @Override
     public @NotNull Vector raiseOther(Number x) {
-        return x instanceof Vector v ? raiseOther(v) : apply(c -> c.raiseOther(x));
+        return x instanceof Vector v ? raiseOther(v) : derive(c -> c.raiseOther(x));
     }
 
     @NotNull
     public Vector raiseOther(Vector x) {
-        return apply(x, Number::raiseOther);
+        return derive(x, Number::raiseOther);
     }
 
     @NotNull
@@ -238,20 +238,20 @@ public class Vector implements Number {
 
     @Override
     public @NotNull Vector negate() {
-        return apply(Number::negate);
+        return derive(Number::negate);
     }
 
     @Override
     public @NotNull Number invert() {
-        return apply(Number::invert);
+        return derive(Number::invert);
     }
 
 
-    public Vector apply(UnaryOperator<Number> operator) {
+    public Vector derive(UnaryOperator<Number> operator) {
         return new Vector(this, operator);
     }
 
-    public Vector apply(Vector x, BinaryOperator<Number> operator) {
+    public Vector derive(Vector x, BinaryOperator<Number> operator) {
         return new Vector(this, x, operator);
     }
 

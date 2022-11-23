@@ -55,9 +55,9 @@ public final class Functions {
 
     public static Number min(Number a, Number b) {
         if(a instanceof Expression.Function f)
-            return f.apply("min", "min($1,$2)", b, Functions::min);
+            return f.derive("min", "min($1,$2)", b, Functions::min);
         if(b instanceof Expression.Function f)
-            return f.apply("min", "min($2,$1)", a, Functions::min);
+            return f.derive("min", "min($2,$1)", a, Functions::min);
         if(b == SymbolLookup.UNSPECIFIED)
             return min(a);
         Number relation = a.lessThan(b);
@@ -74,9 +74,9 @@ public final class Functions {
 
     public static Number max(Number a, Number b) {
         if(a instanceof Expression.Function f)
-            return f.apply("max", "max($1,$2)", b, Functions::max);
+            return f.derive("max", "max($1,$2)", b, Functions::max);
         if(b instanceof Expression.Function f)
-            return f.apply("max", "max($2,$1)", a, Functions::max);
+            return f.derive("max", "max($2,$1)", a, Functions::max);
         if(b == SymbolLookup.UNSPECIFIED)
             return max(a);
         Number relation = a.greaterThan(b);
@@ -97,8 +97,8 @@ public final class Functions {
         return switch(x) {
             case Rational f -> new Rational(f.n.divide(f.d));
             case Real d -> new Real(d.value.setScale(0, RoundingMode.DOWN), d.precise);
-            case Vector v -> v.apply(Functions::floor);
-            case Expression.Function f -> f.apply("floor", "floor($x)", Functions::floor);
+            case Vector v -> v.derive(Functions::floor);
+            case Expression.Function f -> f.derive("floor", "floor($x)", Functions::floor);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -107,8 +107,8 @@ public final class Functions {
         return switch(x) {
             case Rational f -> new Rational(f.n.add(f.d).subtract(BigInteger.ONE).divide(f.d));
             case Real d -> new Real(d.value.setScale(0, RoundingMode.UP), d.precise);
-            case Vector v -> v.apply(Functions::ceil);
-            case Expression.Function f -> f.apply("ceil", "ceil($x)", Functions::ceil);
+            case Vector v -> v.derive(Functions::ceil);
+            case Expression.Function f -> f.derive("ceil", "ceil($x)", Functions::ceil);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -117,8 +117,8 @@ public final class Functions {
         return switch(x) {
             case Rational r -> new Rational(new Real(r).value.setScale(0, RoundingMode.HALF_UP).toBigInteger());
             case Real d -> new Real(d.value.setScale(0, RoundingMode.HALF_UP), d.precise);
-            case Vector v -> v.apply(Functions::round);
-            case Expression.Function f -> f.apply("round", "round($x)", Functions::round);
+            case Vector v -> v.derive(Functions::round);
+            case Expression.Function f -> f.derive("round", "round($x)", Functions::round);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -129,8 +129,8 @@ public final class Functions {
         return switch(x) {
             case Rational f -> sin(new Real(f));
             case Real d -> sin(d);
-            case Vector v -> v.apply(Functions::sin);
-            case Expression.Function f -> f.apply("sin", "sin($x)", Functions::sin);
+            case Vector v -> v.derive(Functions::sin);
+            case Expression.Function f -> f.derive("sin", "sin($x)", Functions::sin);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -145,8 +145,8 @@ public final class Functions {
         return switch(x) {
             case Rational f -> cos(new Real(f));
             case Real d -> cos(d);
-            case Vector v -> v.apply(Functions::cos);
-            case Expression.Function f -> f.apply("cos", "cos($x)", Functions::cos);
+            case Vector v -> v.derive(Functions::cos);
+            case Expression.Function f -> f.derive("cos", "cos($x)", Functions::cos);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -167,8 +167,8 @@ public final class Functions {
         return switch(x) {
             case Rational f -> asin(new Real(f));
             case Real d -> asin(d);
-            case Vector v -> v.apply(Functions::asin);
-            case Expression.Function f -> f.apply("asin", "asin($x)", Functions::asin);
+            case Vector v -> v.derive(Functions::asin);
+            case Expression.Function f -> f.derive("asin", "asin($x)", Functions::asin);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -184,8 +184,8 @@ public final class Functions {
         return switch(x) {
             case Rational f -> acos(new Real(f));
             case Real d -> acos(d);
-            case Vector v -> v.apply(Functions::acos);
-            case Expression.Function f -> f.apply("acos", "acos($x)", Functions::acos);
+            case Vector v -> v.derive(Functions::acos);
+            case Expression.Function f -> f.derive("acos", "acos($x)", Functions::acos);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -201,8 +201,8 @@ public final class Functions {
         return switch(x) {
             case Rational f -> atan(new Real(f));
             case Real d -> atan(d);
-            case Vector v -> v.apply(Functions::atan);
-            case Expression.Function f -> f.apply("atan", "atan($x)", Functions::atan);
+            case Vector v -> v.derive(Functions::atan);
+            case Expression.Function f -> f.derive("atan", "atan($x)", Functions::atan);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
@@ -213,16 +213,16 @@ public final class Functions {
 
     public static Number atan2(Number y, Number x) {
         if(y instanceof Expression.Function f)
-            return f.apply("atan", "atan2($1,$2)", x, Functions::atan2);
+            return f.derive("atan", "atan2($1,$2)", x, Functions::atan2);
         if(x instanceof Expression.Function f)
-            return f.apply("atan", "atan2($2,1)", y, Functions::atan2);
+            return f.derive("atan", "atan2($2,1)", y, Functions::atan2);
         if(y instanceof Vector vy) {
             if(x instanceof Vector vx)
-                return vy.apply(vx, Functions::atan2);
-            return vy.apply(yc -> atan2(yc, x));
+                return vy.derive(vx, Functions::atan2);
+            return vy.derive(yc -> atan2(yc, x));
         }
         if(x instanceof Vector vx)
-            return vx.apply(xc -> atan2(y, xc));
+            return vx.derive(xc -> atan2(y, xc));
         return new Real(Math.atan2(y.toDouble(null), x.toDouble(null)), false);
     }
 
@@ -232,8 +232,8 @@ public final class Functions {
         return switch(x) {
             case Real d -> exp(d);
             case Rational f -> exp(f);
-            case Vector v -> v.apply(Functions::exp);
-            case Expression.Function f -> f.apply("exp", "exp($x)", Functions::exp);
+            case Vector v -> v.derive(Functions::exp);
+            case Expression.Function f -> f.derive("exp", "exp($x)", Functions::exp);
             default -> throw new UnsupportedOperationException();
         };
     }
@@ -255,8 +255,8 @@ public final class Functions {
         return switch(x) {
             case Real d -> ln(d);
             case Rational f -> ln(f);
-            case Vector v -> v.apply(Functions::ln);
-            case Expression.Function f -> f.apply("ln", "ln($x)", Functions::ln);
+            case Vector v -> v.derive(Functions::ln);
+            case Expression.Function f -> f.derive("ln", "ln($x)", Functions::ln);
             default -> throw new UnsupportedOperationException();
         };
     }
@@ -335,7 +335,7 @@ public final class Functions {
 
     public static Number factorial(Number x) {
         if(x instanceof Vector v)
-            return v.apply(Functions::factorial);
+            return v.derive(Functions::factorial);
         double xd = x.toDouble();
         if(xd != (long) xd)
             throw new IllegalArgumentException("Factorial on non-integer");
@@ -366,16 +366,16 @@ public final class Functions {
 
     public static Number sum(SymbolLookup c, Number low, Number high, Number f) {
         if(low instanceof Expression.Function lowF)
-            return lowF.apply(SIGMA, "sum($x,"+high+","+f+")", l -> sum(c, l, high, f));
+            return lowF.derive(SIGMA, "sum($x,"+high+","+f+")", l -> sum(c, l, high, f));
         if(high instanceof Expression.Function highF)
-            return highF.apply(SIGMA, "sum("+low+",$x,"+f+")", h -> sum(c, low, h, f));
+            return highF.derive(SIGMA, "sum("+low+",$x,"+f+")", h -> sum(c, low, h, f));
         if(low instanceof Vector lowV) {
             if(high instanceof Vector highV)
-                return lowV.apply(highV, (l,h) -> sum(c,l,h,f));
-            return lowV.apply(l -> sum(c, l, high, f));
+                return lowV.derive(highV, (l, h) -> sum(c,l,h,f));
+            return lowV.derive(l -> sum(c, l, high, f));
         }
         if(high instanceof Vector highV)
-            return highV.apply(h -> sum(c, low, h, f));
+            return highV.derive(h -> sum(c, low, h, f));
         return sum(c, low, high, f instanceof Expression.Function ff ? ff : new HardcodedFunction("_f", "_", l -> f));
     }
 
@@ -391,16 +391,16 @@ public final class Functions {
 
     public static Number product(SymbolLookup e, Number low, Number high, Number f) {
         if(low instanceof Expression.Function lowF)
-            return lowF.apply(PI, "product($x,"+high+","+f+")", l -> product(e, l, high, f));
+            return lowF.derive(PI, "product($x,"+high+","+f+")", l -> product(e, l, high, f));
         if(high instanceof Expression.Function highF)
-            return highF.apply(PI, "product("+low+",$x,"+f+")", h -> product(e, low, h, f));
+            return highF.derive(PI, "product("+low+",$x,"+f+")", h -> product(e, low, h, f));
         if(low instanceof Vector lowV) {
             if(high instanceof Vector highV)
-                return lowV.apply(highV, (l,h) -> product(e,l,h,f));
-            return lowV.apply(l -> product(e, l, high, f));
+                return lowV.derive(highV, (l, h) -> product(e,l,h,f));
+            return lowV.derive(l -> product(e, l, high, f));
         }
         if(high instanceof Vector highV)
-            return highV.apply(h -> product(e, low, h, f));
+            return highV.derive(h -> product(e, low, h, f));
         return product(e, low, high, f instanceof Expression.Function ff ? ff : new HardcodedFunction("_f", "_", l -> f));
     }
 
