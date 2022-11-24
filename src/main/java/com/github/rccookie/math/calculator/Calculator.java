@@ -75,7 +75,8 @@ public class Calculator {
             "N_a", new Real(6.02214076, 23, false, false),
             "\u00B50", new Real(1.2566370621219, -6, false, false),
             "ep_0", new Real(8.854187812813, -12, false, false),
-            "k", new Real(1.380649, -23, false, false)
+            "k", new Real(1.380649, -23, false, false),
+            "G", new Real(6.673, -11, false, false)
     );
 
     private final Lookup lookup = new Lookup();

@@ -1,6 +1,7 @@
 package com.github.rccookie.math;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
@@ -252,6 +253,9 @@ public class Real implements Number {
 
     @NotNull
     public Number multiply(Real x) {
+        if(value.equals(BigDecimal.ZERO) || x.value.equals(BigDecimal.ZERO))
+            return zero(precise || x.precise);
+
         if(!(precise && x.precise))
             return new Real(value.multiply(x.value, context), false);
 
@@ -264,6 +268,11 @@ public class Real implements Number {
 
     @NotNull
     public Number multiply(Rational x) {
+        if(x.n.equals(BigInteger.ZERO))
+            return Number.ZERO();
+        if(value.equals(BigDecimal.ZERO))
+            return one(precise);
+
         if(!precise)
             return new Real(value.multiply(new Real(x, false).value, context), false);
 
@@ -286,6 +295,8 @@ public class Real implements Number {
 
     @NotNull
     public Number divide(Real x) {
+        if(x.value.equals(BigDecimal.ZERO))
+            throw new ArithmeticException("Division by zero");
         if(!(precise && x.precise))
             return new Real(value.divide(x.value, context), false);
 
@@ -298,6 +309,8 @@ public class Real implements Number {
 
     @NotNull
     public Number divide(Rational x) {
+        if(x.n.equals(BigInteger.ZERO))
+            throw new ArithmeticException("Division by zero");
         if(!precise)
             return new Real(value.divide(new Real(x, false).value, context), false);
 
@@ -320,6 +333,11 @@ public class Real implements Number {
 
     @NotNull
     public Number divideOther(Rational x) {
+        if(value.equals(BigDecimal.ZERO))
+            throw new ArithmeticException("Division by zero");
+        if(x.equals(Rational.ZERO))
+            return Number.ZERO();
+
         if(!precise)
             return new Real(new Real(x, false).value.divide(value, context), false);
 
