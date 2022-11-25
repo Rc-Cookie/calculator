@@ -217,7 +217,7 @@ public class Real implements Number {
             return f.subtract(x);
 
         Real xd = new Real(x);
-        return new Real(value.add(xd.value), xd.precise && value.subtract(xd.value).add(xd.value).compareTo(value) == 0);
+        return new Real(value.subtract(xd.value), xd.precise && value.subtract(xd.value).add(xd.value).compareTo(value) == 0);
     }
 
     @Override

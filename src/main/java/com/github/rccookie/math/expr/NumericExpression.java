@@ -20,4 +20,14 @@ record NumericExpression(@NotNull Number value) implements Expression.Numeric {
     public String name() {
         return "Numeric";
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        return (obj instanceof NumericExpression ne && ne.value.equals(value)) || value.equals(obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return value.hashCode();
+    }
 }

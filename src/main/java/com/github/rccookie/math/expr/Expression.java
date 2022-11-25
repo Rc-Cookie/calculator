@@ -277,6 +277,10 @@ public interface Expression extends Number {
         default String toTreeString() {
             return "Symbol[" + name() + "]";
         }
+
+        static Symbol of(String name) {
+            return new Token.Symbol(name);
+        }
     }
 
     /**
