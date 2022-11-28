@@ -5,11 +5,11 @@ import java.util.Arrays;
 import com.github.rccookie.math.Number;
 
 record RuntimeFunction(Expression expr, String... paramNames)
-        implements AbstractFunction {
+        implements Expression.Function {
 
     @Override
     public String toString() {
-        return (paramNames.length == 1 ? paramNames[0] : '('+String.join(",", paramNames)+')')+" -> "+expr;
+        return format((paramNames.length == 1 ? paramNames[0] : '('+String.join(",", paramNames)+')')+" -> $x", expr);
     }
 
     @Override
@@ -53,6 +53,11 @@ record RuntimeFunction(Expression expr, String... paramNames)
         for (String paramName : paramNames)
             lookup.popLocal(paramName);
         return result;
+    }
+
+    @Override
+    public Function simplify() {
+        return new RuntimeFunction(expr.simplify(), paramNames); // Function should stay function, even if expression is constant
     }
 
     @Override

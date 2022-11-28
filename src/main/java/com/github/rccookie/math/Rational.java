@@ -9,7 +9,7 @@ import com.github.rccookie.math.expr.SymbolLookup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class Rational implements Number {
+public class Rational implements SimpleNumber {
 
 
     public static final Rational ZERO = new Rational(0);
@@ -88,7 +88,7 @@ public class Rational implements Number {
     }
 
     @Override
-    public @NotNull Number equalTo(Number x) {
+    public @NotNull SimpleNumber equalTo(SimpleNumber x) {
         return x instanceof Rational f ? equalTo(f) : x.equalTo(this);
     }
 
@@ -97,7 +97,7 @@ public class Rational implements Number {
     }
 
     @Override
-    public @NotNull Number lessThan(Number x) {
+    public @NotNull SimpleNumber lessThan(SimpleNumber x) {
         return x instanceof Rational f ? lessThan(f) : x.greaterThanOrEqual(this);
     }
 
@@ -106,7 +106,7 @@ public class Rational implements Number {
     }
 
     @Override
-    public @NotNull Number greaterThan(Number x) {
+    public @NotNull SimpleNumber greaterThan(SimpleNumber x) {
         return x instanceof Rational f ? greaterThan(f) : x.lessThanOrEqual(this);
     }
 
@@ -115,7 +115,7 @@ public class Rational implements Number {
     }
 
     @Override
-    public @NotNull Number add(Number x) {
+    public @NotNull SimpleNumber add(SimpleNumber x) {
         return x instanceof Rational f ? add(f) : x.add(this);
     }
 
@@ -125,7 +125,7 @@ public class Rational implements Number {
     }
 
     @Override
-    public @NotNull Number subtract(Number x) {
+    public @NotNull SimpleNumber subtract(SimpleNumber x) {
         return x instanceof Rational f ? subtract(f) : x.subtractFrom(this);
     }
 
@@ -135,12 +135,12 @@ public class Rational implements Number {
     }
 
     @Override
-    public @NotNull Number subtractFrom(Number x) {
+    public @NotNull SimpleNumber subtractFrom(SimpleNumber x) {
         return x.subtract(this);
     }
 
     @Override
-    public @NotNull Number multiply(Number x) {
+    public @NotNull SimpleNumber multiply(SimpleNumber x) {
         return x instanceof Rational f ? multiply(f) : x.multiply(this);
     }
 
@@ -150,7 +150,7 @@ public class Rational implements Number {
     }
 
     @Override
-    public @NotNull Number divide(Number x) {
+    public @NotNull SimpleNumber divide(SimpleNumber x) {
         return x instanceof Rational f ? divide(f) : x.divideOther(this);
     }
 
@@ -160,7 +160,7 @@ public class Rational implements Number {
     }
 
     @Override
-    public @NotNull Number divideOther(Number x) {
+    public @NotNull SimpleNumber divideOther(SimpleNumber x) {
         return x.divide(this);
     }
 
@@ -171,8 +171,10 @@ public class Rational implements Number {
 
     @NotNull
     public Number raise(Rational x) {
-        if(Objects.equals(x.n, x.d)) return ONE;
+        if(Objects.equals(x.n, x.d)) return this;
         if(x.n.compareTo(BigInteger.ZERO) < 0) return raise(x.negate()).invert();
+        if(x.n.compareTo(x.d) < 0 && n.signum() < 0)
+            return new Complex(ZERO, (SimpleNumber) negate().raise(x));
         if(x.n.equals(BigInteger.ONE)) {
             if(x.d.equals(BigInteger.ONE)) return this;
             if(x.d.equals(BigInteger.TWO)) {
@@ -201,23 +203,23 @@ public class Rational implements Number {
     }
 
     @Override
-    public @NotNull Number abs() {
+    public @NotNull SimpleNumber abs() {
         return n.compareTo(BigInteger.ZERO) < 0 ? new Rational(n.negate(),d) : this;
     }
 
     @Override
-    public @NotNull Number negate() {
+    public @NotNull SimpleNumber negate() {
         return new Rational(n.negate(),d);
     }
 
     @Override
-    public @NotNull Number invert() {
+    public @NotNull SimpleNumber invert() {
         return n.equals(d) ? this : new Rational(d,n);
     }
 
 
 
-    public static Number tryFromDecimal(Real x) {
+    public static SimpleNumber tryFromDecimal(Real x) {
         Rational f = fromDecimal(x);
         return f != null ? f : x;
     }

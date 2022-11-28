@@ -31,6 +31,7 @@ public class Calculator {
     private static final Map<String, Number> DEFAULT_VARS = Utils.map(
             "pi", Number.PI(),
             "e", Number.E(),
+            "i", Number.I(),
             "dec", Number.ABOUT_ONE(),
             "ans", new Rational(42),
 
@@ -46,6 +47,7 @@ public class Calculator {
             "acos", Functions.ACOS,
             "atan", Functions.ATAN,
             "atan2", Functions.ATAN2,
+            "arg", Functions.ARGUMENT,
             "abs", Functions.ABS,
             "sqrt", Functions.SQRT,
             "hypot", Functions.HYPOT,
@@ -62,7 +64,12 @@ public class Calculator {
             "sum", Functions.SUM,
             "\u03A3", Functions.SUM,
             "product", Functions.PRODUCT,
-            "\u03A0", Functions.PRODUCT
+            "\u03A0", Functions.PRODUCT,
+
+            "poly", Functions.POLYNOM,
+            "der", Functions.DERIVATIVE,
+            "antiDer", Functions.ANTIDERIVATIVE,
+            "int", Functions.INTEGRATE
     );
     private static final Map<String, Number> OPTIONAL_DEFAULT_VARS = Utils.map(
             "precision", new Rational(Real.getPrecision()),
@@ -97,7 +104,7 @@ public class Calculator {
         if(expression.isEmpty())
             return evaluate(lastExpr);
         char c = expression.charAt(0);
-        if(c == '+' || c == '*' || c == '/' || c == ':' || c == '^' || c == '>' || c == '<' || c == '=')
+        if(c == '+' || c == '*' || c == '/' || c == ':' || c == '^' || c == '>' || c == '<' || c == '=' || c == '\u00B2' || c == '\u00B3')
             expression = "ans " + expression;
         return evaluate(expression);
     }
@@ -108,6 +115,10 @@ public class Calculator {
         Console.debug(expr);
         Console.debug(expr.toTreeString());
         Number ans = expr.evaluate(lookup);
+        if(ans instanceof Expression e)
+            ans = e.simplify();
+        Console.debug("Result:");
+        Console.debug(Expression.of(ans).toTreeString());
         lastExpr = expression;
         lookup.variables.put("ans", ans);
         return ans;
@@ -125,13 +136,13 @@ public class Calculator {
                     evalCommand(calculator, "exit");
                 });
         parser.setName("""
-                        Java math interpreter - version 2.3
+                        Java math interpreter - version 2.4
                         By RcCookie""");
         parser.setDescription("Evaluate entered math expressions. Evaluate '\\help' to show expressions help");
         parser.parse(args);
 
         System.out.println("""
-                        Java math interpreter - version 2.3
+                        Java math interpreter - version 2.4
                         By RcCookie
                         -----------------------------------""");
 

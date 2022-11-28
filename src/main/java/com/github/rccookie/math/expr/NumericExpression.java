@@ -1,5 +1,6 @@
 package com.github.rccookie.math.expr;
 
+import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.util.Arguments;
 
@@ -29,5 +30,13 @@ record NumericExpression(@NotNull Number value) implements Expression.Numeric {
     @Override
     public int hashCode() {
         return value.hashCode();
+    }
+
+    @Override
+    public int precedence() {
+        if(!(value instanceof Complex c) || c.im.equals(Number.ZERO()) || c.equals(Number.I()))
+            return Integer.MAX_VALUE;
+        String str = c.toString();
+        return (str.contains("+") || str.contains("-") ? Token.PLUS : Token.MULTIPLY).precedence();
     }
 }

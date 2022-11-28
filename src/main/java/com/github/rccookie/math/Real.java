@@ -6,13 +6,14 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.util.Arguments;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class Real implements Number {
+public class Real implements SimpleNumber {
 
-    static MathContext context = new MathContext(50, RoundingMode.HALF_UP);
+    static MathContext context = new MathContext(53, RoundingMode.HALF_UP);
 
 
 
@@ -25,8 +26,8 @@ public class Real implements Number {
     public static final Real PI = new Real(BigDecimalMath.PI, false, false);
     public static final Real E = new Real(BigDecimalMath.E, false, false);
 
-    public static final Real RAD_TO_DEG = (Real) PI.divideOther(180);
-    public static final Real DEG_TO_RAD = (Real) PI.divide(180);
+    public static final Real RAD_TO_DEG = new Real(new BigDecimal(180).divide(BigDecimalMath.PI, new MathContext(BigDecimalMath.PI.precision())), false, false);
+    public static final Real DEG_TO_RAD = new Real(BigDecimalMath.PI.divide(new BigDecimal(180), new MathContext(BigDecimalMath.PI.precision())), false, false);
 
 
 
@@ -74,20 +75,24 @@ public class Real implements Number {
 
     @Override
     public String toString() {
-        BigDecimal v = value.setScale(context.getPrecision(), context.getRoundingMode()).stripTrailingZeros();
+        BigDecimal v = roundedValue().stripTrailingZeros();
         return SCIENTIFIC_NOTATION ? v.toString() : v.toPlainString();
     }
 
     @Override
     public boolean equals(Object obj) {
-        return (obj instanceof Real d && value.compareTo(d.value) == 0) ||
+        return (obj instanceof Real d && roundedValue().compareTo(d.roundedValue()) == 0) ||
                (obj instanceof Rational r && equals(new Real(r, false))) ||
                (obj instanceof Vector v && v.isScalar() && equals(v.x()));
     }
 
+    private BigDecimal roundedValue() {
+        return value.setScale(context.getPrecision() - 3, context.getRoundingMode());
+    }
+
     @Override
     public int hashCode() {
-        return value.hashCode();
+        return roundedValue().hashCode();
     }
 
     @Deprecated
@@ -102,7 +107,7 @@ public class Real implements Number {
     }
 
     @Override
-    public @NotNull Number equalTo(Number x) {
+    public @NotNull SimpleNumber equalTo(SimpleNumber x) {
         return switch(x) {
             case Real d -> equalTo(d);
             case Rational r -> equalTo(r);
@@ -110,16 +115,16 @@ public class Real implements Number {
         };
     }
 
-    public Number equalTo(Real x) {
-        return new Real(value.compareTo(x.value) == 0 ? 1 : 0, precise && x.precise);
+    public SimpleNumber equalTo(Real x) {
+        return new Real(roundedValue().compareTo(x.roundedValue()) == 0 ? 1 : 0, precise && x.precise);
     }
 
-    public Number equalTo(Rational x) {
+    public SimpleNumber equalTo(Rational x) {
         return equalTo(new Real(x, precise));
     }
 
     @Override
-    public @NotNull Number lessThan(Number x) {
+    public @NotNull SimpleNumber lessThan(SimpleNumber x) {
         return switch(x) {
             case Real d -> lessThan(d);
             case Rational r -> lessThan(r);
@@ -127,16 +132,16 @@ public class Real implements Number {
         };
     }
 
-    public Number lessThan(Real x) {
+    public SimpleNumber lessThan(Real x) {
         return new Real(value.compareTo(x.value) < 0 ? 1 : 0, precise && x.precise);
     }
 
-    public Number lessThan(Rational x) {
+    public SimpleNumber lessThan(Rational x) {
         return lessThan(new Real(x, precise));
     }
 
     @Override
-    public @NotNull Number greaterThan(Number x) {
+    public @NotNull SimpleNumber greaterThan(SimpleNumber x) {
         return switch(x) {
             case Real d -> greaterThan(d);
             case Rational r -> greaterThan(r);
@@ -144,16 +149,16 @@ public class Real implements Number {
         };
     }
 
-    public Number greaterThan(Real x) {
+    public SimpleNumber greaterThan(Real x) {
         return new Real(value.compareTo(x.value) > 0 ? 1 : 0, precise && x.precise);
     }
 
-    public Number greaterThan(Rational x) {
+    public SimpleNumber greaterThan(Rational x) {
         return greaterThan(new Real(x, this.precise));
     }
 
     @Override
-    public @NotNull Number add(Number x) {
+    public @NotNull SimpleNumber add(SimpleNumber x) {
         return switch(x) {
             case Real d -> add(d);
             case Rational r -> add(r);
@@ -162,7 +167,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number add(Real x) {
+    public SimpleNumber add(Real x) {
         if(!(precise && x.precise))
             return new Real(value.add(x.value, context), false);
 
@@ -174,7 +179,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number add(Rational x) {
+    public SimpleNumber add(Rational x) {
         if(!precise)
             return new Real(value.add(new Real(x, false).value), false);
 
@@ -187,7 +192,7 @@ public class Real implements Number {
     }
 
     @Override
-    public @NotNull Number subtract(Number x) {
+    public @NotNull SimpleNumber subtract(SimpleNumber x) {
         return switch(x) {
             case Real d -> subtract(d);
             case Rational r -> subtract(r);
@@ -196,7 +201,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number subtract(Real x) {
+    public SimpleNumber subtract(Real x) {
         if(!(precise && x.precise))
             return new Real(value.subtract(x.value), false);
 
@@ -208,7 +213,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number subtract(Rational x) {
+    public SimpleNumber subtract(Rational x) {
         if(!precise)
             return new Real(value.subtract(new Real(x, false).value), false);
 
@@ -221,7 +226,7 @@ public class Real implements Number {
     }
 
     @Override
-    public @NotNull Number subtractFrom(Number x) {
+    public @NotNull SimpleNumber subtractFrom(SimpleNumber x) {
         return switch(x) {
             case Real d -> d.subtract(this);
             case Rational r -> subtractFrom(r);
@@ -230,7 +235,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number subtractFrom(Rational x) {
+    public SimpleNumber subtractFrom(Rational x) {
         if(!precise)
             return new Real(new Real(x, false).value.subtract(value), false);
 
@@ -243,7 +248,7 @@ public class Real implements Number {
     }
 
     @Override
-    public @NotNull Number multiply(Number x) {
+    public @NotNull SimpleNumber multiply(SimpleNumber x) {
         return switch(x) {
             case Real d -> multiply(d);
             case Rational r -> multiply(r);
@@ -252,7 +257,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number multiply(Real x) {
+    public SimpleNumber multiply(Real x) {
         if(value.equals(BigDecimal.ZERO) || x.value.equals(BigDecimal.ZERO))
             return zero(precise || x.precise);
 
@@ -267,7 +272,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number multiply(Rational x) {
+    public SimpleNumber multiply(Rational x) {
         if(x.n.equals(BigInteger.ZERO))
             return Number.ZERO();
         if(value.equals(BigDecimal.ZERO))
@@ -285,7 +290,7 @@ public class Real implements Number {
     }
 
     @Override
-    public @NotNull Number divide(Number x) {
+    public @NotNull SimpleNumber divide(SimpleNumber x) {
         return switch(x) {
             case Real d -> divide(d);
             case Rational r -> divide(r);
@@ -294,7 +299,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number divide(Real x) {
+    public SimpleNumber divide(Real x) {
         if(x.value.equals(BigDecimal.ZERO))
             throw new ArithmeticException("Division by zero");
         if(!(precise && x.precise))
@@ -308,7 +313,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number divide(Rational x) {
+    public SimpleNumber divide(Rational x) {
         if(x.n.equals(BigInteger.ZERO))
             throw new ArithmeticException("Division by zero");
         if(!precise)
@@ -323,7 +328,7 @@ public class Real implements Number {
     }
 
     @Override
-    public @NotNull Number divideOther(Number x) {
+    public @NotNull SimpleNumber divideOther(SimpleNumber x) {
         return switch(x) {
             case Real d -> d.divide(this);
             case Rational r -> divideOther(r);
@@ -332,7 +337,7 @@ public class Real implements Number {
     }
 
     @NotNull
-    public Number divideOther(Rational x) {
+    public SimpleNumber divideOther(Rational x) {
         if(value.equals(BigDecimal.ZERO))
             throw new ArithmeticException("Division by zero");
         if(x.equals(Rational.ZERO))
@@ -361,9 +366,11 @@ public class Real implements Number {
     @NotNull
     public Number raise(Real x) {
         if(x.value.compareTo(BigDecimal.ZERO) == 0 || value.compareTo(BigDecimal.ONE) == 0)
-            return one(precise && x.precise);
+            return one(precise || x.precise);
         if(x.value.compareTo(BigDecimal.ONE) == 0)
             return x.precise || !this.precise ? this : new Real(value, false);
+        if(x.value.compareTo(BigDecimal.ONE) < 0 && x.value.compareTo(BigDecimal.ONE.negate()) > 0 && value.compareTo(BigDecimal.ZERO) < 0)
+            return new Complex(Number.ZERO(), (SimpleNumber) negate().raise(x));
         if(precise && x.precise) {
             Rational xf = Rational.fromDecimal(x);
             if(xf != null)
@@ -407,17 +414,17 @@ public class Real implements Number {
     }
 
     @Override
-    public @NotNull Number abs() {
+    public @NotNull SimpleNumber abs() {
         return value.signum() < 0 ? new Real(value.negate(), precise) : this;
     }
 
     @Override
-    public @NotNull Number negate() {
+    public @NotNull SimpleNumber negate() {
         return new Real(value.negate(), precise);
     }
 
     @Override
-    public @NotNull Number invert() {
+    public @NotNull SimpleNumber invert() {
         if(value.compareTo(BigDecimal.ONE) == 0) return this;
         Rational f = Rational.fromDecimal(this);
         return f != null ? f.invert() : new Real(BigDecimal.ONE.divide(value, context));
@@ -425,25 +432,26 @@ public class Real implements Number {
 
 
 
-    public static Number one(boolean precise) {
+    public static SimpleNumber one(boolean precise) {
         return precise ? Number.ONE() : Number.ABOUT_ONE();
     }
 
-    public static Number zero(boolean precise) {
+    public static SimpleNumber zero(boolean precise) {
         return precise ? Number.ZERO() : new Real(0, false);
     }
 
-    public static Number minusOne(boolean precise) {
+    public static SimpleNumber minusOne(boolean precise) {
         return precise ? Number.MINUS_ONE() : Number.ABOUT_ONE().negate();
     }
 
 
 
     public static int getPrecision() {
-        return context.getPrecision();
+        return context.getPrecision() - 3;
     }
 
     public static void setPrecision(int precision) {
-        context = new MathContext(precision, RoundingMode.HALF_UP);
+        Arguments.checkRange(precision, 2, null);
+        context = new MathContext(precision + 3, RoundingMode.HALF_UP);
     }
 }

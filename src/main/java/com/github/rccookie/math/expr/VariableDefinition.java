@@ -16,8 +16,13 @@ record VariableDefinition(Expression nameExpr, String name, Expression expr) imp
     }
 
     @Override
+    public Expression simplify() {
+        return new VariableDefinition(nameExpr, name, expr.simplify());
+    }
+
+    @Override
     public String toString() {
-        return nameExpr + ":=(" + expr + ')';
+        return format("$1 := $2", nameExpr, expr);
     }
 
     @Override
@@ -28,6 +33,11 @@ record VariableDefinition(Expression nameExpr, String name, Expression expr) imp
     @Override
     public Expression b() {
         return expr;
+    }
+
+    @Override
+    public int precedence() {
+        return Token.DEFINE.precedence();
     }
 
     private static String getName(Expression nameExpr) {

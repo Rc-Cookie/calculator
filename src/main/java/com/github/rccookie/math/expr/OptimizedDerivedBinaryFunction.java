@@ -3,7 +3,7 @@ package com.github.rccookie.math.expr;
 import com.github.rccookie.math.Number;
 
 record OptimizedDerivedBinaryFunction(Function base, Number optimize)
-        implements AbstractFunction, Expression.BinaryOperation {
+        implements Expression.Function, Expression.BinaryOperation {
 
     OptimizedDerivedBinaryFunction {
         if(!(base instanceof BinaryOperation))
@@ -30,6 +30,11 @@ record OptimizedDerivedBinaryFunction(Function base, Number optimize)
     @Override
     public Expression b() {
         return ((BinaryOperation) base).b();
+    }
+
+    @Override
+    public int precedence() {
+        return base.precedence();
     }
 
     @Override
@@ -62,5 +67,12 @@ record OptimizedDerivedBinaryFunction(Function base, Number optimize)
         Number ea = ((Function) a()).evaluate(lookup, params);
         if(ea.equals(optimize)) return ea;
         return base.evaluate(lookup, params);
+    }
+
+    @Override
+    public Function simplify() {
+        Function sa = ((Function) a()).simplify();
+        if(sa.expr().equals(optimize)) return sa;
+        return base.simplify();
     }
 }

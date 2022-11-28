@@ -22,7 +22,7 @@ sealed interface Token {
     Operator DIVIDE    = new Operator("/", 20, Expression::divide);
     Operator NEGATE    = new Operator("~", 11, Expression::negate);
     Operator POWER     = new Operator("^", 30, Expression::raise);
-    Operator FACTORIAL = new Operator("!", 40, x -> new SimpleUnaryOperation("!", "($x)!", x, Functions::factorial));
+    Operator FACTORIAL = new Operator("!", 40, x -> new SimpleUnaryOperation("!", "($x)!", x, 40, Functions::factorial));
     Operator ABS       = Operator.functionCall("abs");
 
     Operator DEGREE  = new Operator("\u00B0", 120, x -> x.multiply(Number.DEG_TO_RAD()));
@@ -41,6 +41,7 @@ sealed interface Token {
 
     Operator IMPLICIT_OPERATION = new Operator("", MULTIPLY.precedence, ImplicitOperationImpl::new);
 
+    NumberToken I = new NumberToken(Number.I());
 
 
     record Operator(String literal, int precedence, boolean isFunction,

@@ -1,5 +1,6 @@
 package com.github.rccookie.math.expr;
 
+import java.util.Arrays;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
@@ -7,7 +8,7 @@ import java.util.function.UnaryOperator;
 import com.github.rccookie.math.Number;
 
 record HardcodedFunction(String name, BiFunction<SymbolLookup,Number[],Number> function, String... paramNames)
-        implements AbstractFunction {
+        implements Expression.Function {
 
     HardcodedFunction(String name, java.util.function.Function<Number[],Number> function, String... paramNames) {
         this(name, (l,p) -> function.apply(p), paramNames);
@@ -51,10 +52,20 @@ record HardcodedFunction(String name, BiFunction<SymbolLookup,Number[],Number> f
 
     @Override
     public Number evaluate(SymbolLookup lookup, Number params) {
-        if(!(params instanceof Numbers l))
-            return function.apply(lookup, new Number[] { params });
-        if(l.size() <= paramCount())
-            return function.apply(lookup, l.stream().map(e -> e.evaluate(lookup)).toArray(Number[]::new));
+        if(!(params instanceof Numbers l)) {
+            Number[] paramsArr = new Number[paramCount()];
+            Arrays.fill(paramsArr, SymbolLookup.UNSPECIFIED);
+            paramsArr[0] = params;
+            return function.apply(lookup, paramsArr);
+        }
+        if(l.size() <= paramCount()) {
+            Number[] paramsArr = new Number[paramCount()];
+            for(int i=0; i<l.size(); i++)
+                paramsArr[i] = l.evaluate(i, lookup);
+            for(int i=l.size(); i<paramsArr.length; i++)
+                paramsArr[i] = SymbolLookup.UNSPECIFIED;
+            return function.apply(lookup, paramsArr);
+        }
         if(paramCount() == 1) {
             Expression[] results = new Expression[l.size()];
             for (int i = 0; i < results.length; i++)
@@ -65,6 +76,11 @@ record HardcodedFunction(String name, BiFunction<SymbolLookup,Number[],Number> f
     }
 
     @Override
+    public Function simplify() {
+        return this;
+    }
+
+    @Override
     public int operandCount() {
         return 0;
     }
@@ -72,5 +88,10 @@ record HardcodedFunction(String name, BiFunction<SymbolLookup,Number[],Number> f
     @Override
     public Expression[] operands() {
         return new Expression[0];
+    }
+
+    @Override
+    public int precedence() {
+        return Integer.MAX_VALUE;
     }
 }

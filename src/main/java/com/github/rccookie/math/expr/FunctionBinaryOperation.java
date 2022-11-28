@@ -10,7 +10,8 @@ record FunctionBinaryOperation(String name,
                                String format,
                                Expression.Function a,
                                Expression.Function b,
-                               BinaryOperator<Number> operator) implements AbstractFunction, Expression.BinaryOperation {
+                               int opPrecedence,
+                               BinaryOperator<Number> operator) implements Expression.Function, Expression.BinaryOperation {
 
     @Override
     public int paramCount() {
@@ -52,12 +53,32 @@ record FunctionBinaryOperation(String name,
                 Arrays.equals(a.paramNames(), b.paramNames());
     }
 
+    @Override
+    public Function simplify() {
+        Function as = a.simplify(), bs = b.simplify();
+        if(bs.expr() instanceof Numeric bn) {
+            if(as.expr() instanceof Numeric an)
+                return new RuntimeFunction(Expression.of(operator.apply(an.value(), bn.value())), paramNames());
+            return as.derive(name, format, as, opPrecedence, operator);
+        }
+        if(as.expr() instanceof Numeric an)
+            return bs.derive(name, formatFlipped(), an.value(), opPrecedence, (b,a) -> operator.apply(a,b));
+        return new FunctionBinaryOperation(name, format, as, bs, opPrecedence, operator);
+    }
 
+    private String formatFlipped() {
+        return format.replace("$1", "$3").replace("$2", "$1").replace("$3", "$2");
+    }
 
     private final class Body implements Expression {
 
         @Override
         public Number evaluate(SymbolLookup lookup) {
+            return this;
+        }
+
+        @Override
+        public Expression simplify() {
             return this;
         }
 
@@ -78,18 +99,24 @@ record FunctionBinaryOperation(String name,
 
         @Override
         public String toString() {
+            if(equalSignatures())
+                return format(format, a.expr(), b.expr());
+
             String[] paramNames = paramNames();
-            String aExprStr, bExprStr;
-            if(equalSignatures()) {
-                aExprStr = a.expr().toString();
-                bExprStr = b.expr().toString();
-            }
+            Expression params;
+            if(paramNames.length == 1)
+                params = Symbol.of(paramNames[0]);
             else {
-                String paramsStr = ")(" + String.join(",", paramNames) + ")";
-                aExprStr = "(" + a + paramsStr;
-                bExprStr = "(" + b + paramsStr;
+                Expression[] elements = new Expression[paramNames.length];
+                Arrays.setAll(elements, i -> Symbol.of(paramNames[i]));
+                params = Numbers.of(elements);
             }
-            return format.replace("$1", aExprStr).replace("$2", bExprStr);
+            return format(format, new FunctionCall(a, params), new FunctionCall(b, params));
+        }
+
+        @Override
+        public int precedence() {
+            return opPrecedence;
         }
     }
 }

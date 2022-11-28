@@ -21,6 +21,16 @@ record OptimizedBinaryOperation(BinaryOperation base, Number optimize)
     }
 
     @Override
+    public Expression simplify() {
+        Expression sa = a().simplify();
+        if(sa.equals(optimize)) return sa;
+        Expression sBase = base.simplify();
+        if(sBase instanceof BinaryOperation b)
+            return new OptimizedBinaryOperation(b, optimize);
+        return sBase;
+    }
+
+    @Override
     public String name() {
         return base.name();
     }
@@ -38,5 +48,10 @@ record OptimizedBinaryOperation(BinaryOperation base, Number optimize)
     @Override
     public Expression b() {
         return base.b();
+    }
+
+    @Override
+    public int precedence() {
+        return base.precedence();
     }
 }

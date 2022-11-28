@@ -9,17 +9,19 @@ import org.jetbrains.annotations.NotNull;
 
 public interface Number {
 
-    @NotNull static Number ZERO() { return Rational.ZERO; }
-    @NotNull static Number ONE() { return Rational.ONE; }
-    @NotNull static Number MINUS_ONE() { return Rational.MINUS_ONE; }
-    @NotNull static Number TWO() { return Rational.TWO; }
-    @NotNull static Number HALF() { return Rational.HALF; }
-    @NotNull static Number ABOUT_ONE() { return Real.ABOUT_ONE; }
-    @NotNull static Number PI() { return Real.PI; }
-    @NotNull static Number E() { return Real.E; }
+    @NotNull static SimpleNumber ZERO() { return Rational.ZERO; }
+    @NotNull static SimpleNumber ONE() { return Rational.ONE; }
+    @NotNull static SimpleNumber MINUS_ONE() { return Rational.MINUS_ONE; }
+    @NotNull static SimpleNumber TWO() { return Rational.TWO; }
+    @NotNull static SimpleNumber HALF() { return Rational.HALF; }
+    @NotNull static SimpleNumber ABOUT_ONE() { return Real.ABOUT_ONE; }
+    @NotNull static SimpleNumber PI() { return Real.PI; }
+    @NotNull static SimpleNumber E() { return Real.E; }
 
-    @NotNull static Number RAD_TO_DEG() { return Real.RAD_TO_DEG; }
-    @NotNull static Number DEG_TO_RAD() { return Real.DEG_TO_RAD; }
+    @NotNull static Complex I() { return Complex.I; }
+
+    @NotNull static SimpleNumber RAD_TO_DEG() { return Real.RAD_TO_DEG; }
+    @NotNull static SimpleNumber DEG_TO_RAD() { return Real.DEG_TO_RAD; }
 
 
 

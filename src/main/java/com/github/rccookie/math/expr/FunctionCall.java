@@ -7,12 +7,17 @@ record FunctionCall(Expression function, Expression params)
 
     @Override
     public String toString() {
-        return "(" + function + ")(" + params + ")";
+        return format("$x(" + params + ")", function);
     }
 
     @Override
     public Number evaluate(SymbolLookup lookup) {
         return ((Expression.Function) function.evaluate(lookup)).evaluate(lookup, params.evaluate(lookup));
+    }
+
+    @Override
+    public Expression simplify() {
+        return new FunctionCall(function.simplify(), params.simplify());
     }
 
     @Override

@@ -9,11 +9,9 @@ record DerivedBinaryFunction(
         String format,
         Expression.Function function,
         Expression b,
-        BinaryOperator<Number> operator) implements AbstractFunction, Expression.BinaryOperation {
+        int opPrecedence,
+        BinaryOperator<Number> operator) implements Expression.Function, Expression.BinaryOperation {
 
-    DerivedBinaryFunction(String name, String format, Function function, Number b, BinaryOperator<Number> operator) {
-        this(name, format, function, Expression.of(b), operator);
-    }
 
     @Override
     public int operandCount() {
@@ -27,7 +25,7 @@ record DerivedBinaryFunction(
 
     @Override
     public Expression[] operands() {
-        return new Expression[] { this, b };
+        return new Expression[] { function, b };
     }
 
     @Override
@@ -42,8 +40,7 @@ record DerivedBinaryFunction(
 
     @Override
     public String toString() {
-        return (paramCount() == 1 ? paramNames()[0] : '('+String.join(",", paramNames())+')')+" -> " +
-                format.replace("$1", function.expr().toString()).replace("$2", b.toString());
+        return (paramCount() == 1 ? paramNames()[0] : '('+String.join(",", paramNames())+')')+" -> "+expr();
     }
 
     @Override
@@ -56,12 +53,27 @@ record DerivedBinaryFunction(
         return Expression.evaluate(operator.apply(function.evaluate(lookup, params), b), lookup);
     }
 
-
+    @Override
+    public Function simplify() {
+        Function fs = function.simplify();
+        Expression bs = b.simplify();
+        if(fs.expr() instanceof Numeric fn) {
+            if(bs instanceof Numeric bn)
+                return new RuntimeFunction(Expression.of(operator.apply(fn.value(), bn.value())), paramNames());
+            return new RuntimeFunction(new SimpleBinaryOperation(name, format, fn, bs, opPrecedence, operator), paramNames());
+        }
+        return new DerivedBinaryFunction(name, format, fs, bs, opPrecedence, operator);
+    }
 
     private final class Body implements Expression {
 
         @Override
         public Number evaluate(SymbolLookup lookup) {
+            return this;
+        }
+
+        @Override
+        public Expression simplify() {
             return this;
         }
 
@@ -81,8 +93,13 @@ record DerivedBinaryFunction(
         }
 
         @Override
+        public int precedence() {
+            return opPrecedence;
+        }
+
+        @Override
         public String toString() {
-            return format.replace("$1", function.expr().toString()).replace("$2", b.toString());
+            return format(format, function.expr(), b);
         }
     }
 }

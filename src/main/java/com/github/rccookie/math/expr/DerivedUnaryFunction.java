@@ -8,7 +8,8 @@ record DerivedUnaryFunction(
         String name,
         String format,
         Expression.Function function,
-        UnaryOperator<Number> operator) implements AbstractFunction, Expression.UnaryOperation {
+        int opPrecedence,
+        UnaryOperator<Number> operator) implements Expression.Function, Expression.UnaryOperation {
 
     @Override
     public int operandCount() {
@@ -22,7 +23,7 @@ record DerivedUnaryFunction(
 
     @Override
     public Expression[] operands() {
-        return new Expression[] { this };
+        return new Expression[] { function };
     }
 
     @Override
@@ -37,8 +38,7 @@ record DerivedUnaryFunction(
 
     @Override
     public String toString() {
-        return (paramCount() == 1 ? paramNames()[0] : '('+String.join(",", paramNames())+')')+" -> " +
-                format.replace("$x", function.expr().toString());
+        return (paramCount() == 1 ? paramNames()[0] : '('+String.join(",", paramNames())+')')+" -> "+expr();
     }
 
     @Override
@@ -51,12 +51,23 @@ record DerivedUnaryFunction(
         return Expression.evaluate(operator.apply(function.evaluate(lookup, params)), lookup);
     }
 
-
+    @Override
+    public Function simplify() {
+        Function simplified = function.simplify();
+        if(simplified instanceof Numeric n)
+            return new RuntimeFunction(Expression.of(operator.apply(n.value())), paramNames());
+        return new DerivedUnaryFunction(name, format, simplified, opPrecedence, operator);
+    }
 
     private final class Body implements Expression {
 
         @Override
         public Number evaluate(SymbolLookup lookup) {
+            return this;
+        }
+
+        @Override
+        public Expression simplify() {
             return this;
         }
 
@@ -76,8 +87,13 @@ record DerivedUnaryFunction(
         }
 
         @Override
+        public int precedence() {
+            return opPrecedence;
+        }
+
+        @Override
         public String toString() {
-            return format.replace("$x", function.expr().toString());
+            return format(format, function.expr());
         }
     }
 }

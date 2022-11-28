@@ -23,7 +23,7 @@ record NumbersImpl(Expression... elements) implements Expression.Numbers {
 
     @Override
     public String toString() {
-        return Arrays.stream(elements).map(Object::toString).collect(Collectors.joining(", "));
+        return Arrays.stream(elements).map(e -> e.toString(precedence())).collect(Collectors.joining(", "));
     }
 
     @NotNull
@@ -63,6 +63,13 @@ record NumbersImpl(Expression... elements) implements Expression.Numbers {
     @Override
     public Number evaluate(int index, SymbolLookup lookup) {
         return Expression.evaluate(elements[index], lookup);
+    }
+
+    @Override
+    public Expression simplify() {
+        Expression[] simplified = new Expression[size()];
+        Arrays.setAll(simplified, i -> elements[i].simplify());
+        return new NumbersImpl(simplified);
     }
 
     @Override

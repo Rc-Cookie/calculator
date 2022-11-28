@@ -14,6 +14,11 @@ record FunctionDefinition(String name, Expression signature, Function function)
     }
 
     @Override
+    public Expression simplify() {
+        return new FunctionDefinition(name, signature, function.simplify());
+    }
+
+    @Override
     public Expression a() {
         return signature;
     }
@@ -24,8 +29,13 @@ record FunctionDefinition(String name, Expression signature, Function function)
     }
 
     @Override
+    public int precedence() {
+        return Token.DEFINE.precedence();
+    }
+
+    @Override
     public String toString() {
-        return name + '(' + String.join(",", function.paramNames()) + ") := " + function.expr();
+        return format(name + '(' + String.join(",", function.paramNames()) + ") := $x", function.expr());
     }
 
 

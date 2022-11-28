@@ -153,8 +153,9 @@ class Lexer extends StepIterator<Token> {
                 skipWhitespaces();
                 if(src[p] == '(') {
                     next.push(Token.IMPLICIT_OPERATION);
-                    yield new Token.Symbol(name);
+                    yield name.equals("i") ? Token.I : new Token.Symbol(name);
                 }
+                if(name.equals("i")) yield Token.I;
                 yield src[p] == '(' ? Token.Operator.functionCall(name) : new Token.Symbol(name);
             }
         };
