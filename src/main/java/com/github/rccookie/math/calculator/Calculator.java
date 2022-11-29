@@ -6,8 +6,10 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
+import java.util.stream.Collectors;
 
 import com.github.rccookie.json.JsonObject;
+import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.Real;
@@ -24,7 +26,8 @@ public class Calculator {
 
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
             "precision", 50,
-            "scientific", false
+            "scientific", false,
+            "showAsDecimal", true
     );
 
 
@@ -58,6 +61,7 @@ public class Calculator {
             "log", Functions.LOG,
             "get", Functions.GET,
             "size", Functions.SIZE,
+            "norm", Functions.NORMALIZE,
             "cross", Functions.CROSS,
             "deg", Functions.RAD_TO_DEG,
             "rad", Functions.DEG_TO_RAD,
@@ -74,20 +78,22 @@ public class Calculator {
     private static final Map<String, Number> OPTIONAL_DEFAULT_VARS = Utils.map(
             "precision", new Rational(Real.getPrecision()),
             "scientific", Real.SCIENTIFIC_NOTATION ? Number.ONE() : Number.ZERO(),
-            "g", new Real(9.81, false, false),
-            "c", new Rational(299792458),
-            "h", new Real(6.62607015, -34, true, false),
-            "E", new Real(1.602176634, -19, true, false),
-            "m_e", new Real(9.109383701528, -31, false, false),
-            "N_a", new Real(6.02214076, 23, false, false),
-            "\u00B50", new Real(1.2566370621219, -6, false, false),
-            "ep_0", new Real(8.854187812813, -12, false, false),
-            "k", new Real(1.380649, -23, false, false),
-            "G", new Real(6.673, -11, false, false)
+            "showAsDecimal", Rational.TRY_SHOW_AS_DECIMAL
+//            "g", new Real(9.81, false, false),
+//            "c", new Rational(299792458),
+//            "h", new Real(6.62607015, -34, true, false),
+//            "E", new Real(1.602176634, -19, true, false),
+//            "m_e", new Real(9.109383701528, -31, false, false),
+//            "N_a", new Real(6.02214076, 23, false, false),
+//            "\u00B50", new Real(1.2566370621219, -6, false, false),
+//            "ep_0", new Real(8.854187812813, -12, false, false),
+//            "k", new Real(1.380649, -23, false, false),
+//            "G", new Real(6.673, -11, false, false)
     );
 
     private final Lookup lookup = new Lookup();
     private String lastExpr = "ans";
+    private int moreCount = 0;
 
     public Number getVar(String name) {
         return lookup.get(name);
@@ -146,6 +152,8 @@ public class Calculator {
                         By RcCookie
                         -----------------------------------""");
 
+        Rational.TRY_SHOW_AS_DECIMAL = false;
+
         if(System.getProperty("os.name").toLowerCase().contains("windows"))
             checkReg();
 
@@ -157,6 +165,7 @@ public class Calculator {
             config.setDefaults(DEFAULT_SETTINGS);
             calculator.setVar("precision", new Rational(config.getInt("precision")));
             calculator.setVar("scientific", config.getBool("scientific") ? Number.ONE() : Number.ZERO());
+            calculator.setVar("showAsDecimal", config.getBool("showAsDecimal") ? Number.ONE() : Number.ZERO());
         } catch(Exception e) {
             System.err.println("Failed to load settings");
             if(Console.getFilter().isEnabled("debug"))
@@ -170,6 +179,7 @@ public class Calculator {
 
             config.set("precision", Real.getPrecision());
             config.set("scientific", Real.SCIENTIFIC_NOTATION);
+            config.set("showAsDecimal", Rational.TRY_SHOW_AS_DECIMAL);
         }
     }
 
@@ -184,11 +194,12 @@ public class Calculator {
             if(expr.startsWith("\\"))
                 evalCommand(calculator, expr.substring(1));
             else {
+                calculator.moreCount = 0;
                 Number res = calculator.evaluateSmart(expr);
                 if(res instanceof Expression && !(res instanceof Expression.Numbers))
                     System.out.println(res);
                 else
-                    System.out.println((res instanceof Real r && !r.precise ? aboutEqual : "= ") + res);
+                    System.out.println(((res instanceof Real r && !r.precise) || (res instanceof Complex c && !c.precise()) ? aboutEqual : "= ") + res);
             }
         } catch (Throwable t) {
             String msg = t.getMessage();
@@ -200,7 +211,8 @@ public class Calculator {
 
     private static void evalCommand(Calculator calculator, String cmd) {
         Console.mapDebug("Received command", cmd);
-        switch(cmd) {
+        String[] cmds = cmd.split("\s+");
+        switch(cmds[0]) {
             case "exit" -> {
                 try {
                     System.exit((int) calculator.getVar("exit").toDouble(calculator.lookup));
@@ -219,6 +231,27 @@ public class Calculator {
                 }
                 else System.out.println(var.getKey() + " := " + var.getValue());
             });
+            case "more" -> {
+                if(calculator.moreCount < 10)
+                    calculator.moreCount++;
+                Number res = calculator.lookup.get("ans");
+                if(res instanceof Expression && !(res instanceof Expression.Numbers))
+                    System.out.println(res);
+                else {
+                    String aboutEqual = (Charset.defaultCharset().newEncoder().canEncode('\u2248') ? '\u2248' : '~') + " ";
+                    int precision = Real.getPrecision();
+                    Real.setPrecision(precision << calculator.moreCount);
+                    System.out.println(((res instanceof Real r && !r.precise) || (res instanceof Complex c && !c.precise()) ? aboutEqual : "= ") + res);
+                    Real.setPrecision(precision);
+                }
+            }
+            case "load" -> {
+                if(cmds.length != 2)
+                    System.err.println("Usage: \\load <packageName>, i.e. \\load physics");
+                else if(!FormulaPackage.PACKAGES.containsKey(cmds[1].toLowerCase()))
+                    System.err.println("Unknown package " + cmds[1] + ", available: " + FormulaPackage.PACKAGES.keySet().stream().collect(Collectors.joining(", ")));
+                else FormulaPackage.PACKAGES.get(cmds[1].toLowerCase()).addTo(calculator.lookup);
+            }
             case "help" -> System.out.println("""
                     Enter a math expression to be evaluated. Supported features:
                      - Basic arithmetics (+-*/^!)
@@ -232,9 +265,11 @@ public class Calculator {
                      - First class functions: functions (particularly lambdas) may be passed to other functions
                      - Convert degrees to radians when writing ° symbol, i.e. 180° -> pi
                      - Convert percentage to normal number when writing % symbol, i.e. 10% -> 1/10
+                     - Load packages of constants and formulas using \\load <name>, i.e. \\load physics
                      - Use the variable 'ans' to refer to the previous result, or operate as if it was at the front of the expression
                      - Set the variable 'precision' to set the approximate decimal number precision (>1, default is 100)
                      - Set the variable 'scientific' to something other than 0 to enable scientific notation output
+                     - Set the variable 'showAsDecimal' to display fractions that can be converted to decimals as such, and the command \\more to display the last output with higher decimal count
                      - Set the variable 'exit' to a desired value to set the exit code of the program, exit with \\exit""");
             default -> System.out.println("Unknown command: '\\" + cmd + "'");
         }
@@ -310,15 +345,17 @@ public class Calculator {
         public void put(String name, Number var) {
             if(DEFAULT_VARS.containsKey(name))
                 throw new IllegalArgumentException("Cannot override variable '"+name+"'");
-            if(name.equals("precision")) {
-                double p = var.toDouble(this);
-                if(p < 2)
-                    throw new IllegalArgumentException("precision < 2");
-                Real.setPrecision((int) p);
-                var = new Rational((int) p);
+            switch (name) {
+                case "precision" -> {
+                    double p = var.toDouble(this);
+                    if(p < 2)
+                        throw new IllegalArgumentException("precision < 2");
+                    Real.setPrecision((int) p);
+                    var = new Rational((int) p);
+                }
+                case "scientific" -> Real.SCIENTIFIC_NOTATION = !var.equals(Number.ZERO());
+                case "showAsDecimal" -> Rational.TRY_SHOW_AS_DECIMAL = !var.equals(Number.ZERO());
             }
-            else if(name.equals("scientific"))
-                Real.SCIENTIFIC_NOTATION = !var.equals(Number.ZERO());
             variables.put(name, Arguments.checkNull(var, "var"));
         }
     }

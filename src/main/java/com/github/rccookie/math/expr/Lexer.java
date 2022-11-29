@@ -196,8 +196,8 @@ class Lexer extends StepIterator<Token> {
                 (c >= '0' && c <= '9') ||
                 c == '$' || c == '#' || c == '\'' || c == '_' ||
                 c == '\u00E4' || c == '\u00F6' || c == '\u00FC' || c == '\u00DF' || //ae, oe, ue, ss
-                c == '\u00C4' || c == '\u00D6' || c == '\u00DC' ||
-                c == '\u03A3' || c == '\u03A0'; // AE, OE, UE
+                c == '\u00C4' || c == '\u00D6' || c == '\u00DC' || // AE, OE, UE
+                c == '\u03A3' || c == '\u03A0' || c == '\u00B5'; // ^2, ^3, my
     }
 
     private static boolean isBeforeMultiply(Token t) {

@@ -23,7 +23,7 @@ sealed interface Token {
     Operator NEGATE    = new Operator("~", 11, Expression::negate);
     Operator POWER     = new Operator("^", 30, Expression::raise);
     Operator FACTORIAL = new Operator("!", 40, x -> new SimpleUnaryOperation("!", "($x)!", x, 40, Functions::factorial));
-    Operator ABS       = Operator.functionCall("abs");
+    Operator ABS       = new Operator("abs", -10, true, s -> new Abs(s.pop()));
 
     Operator DEGREE  = new Operator("\u00B0", 120, x -> x.multiply(Number.DEG_TO_RAD()));
     Operator PERCENT = new Operator("%", 120, x -> x.divide(new Real(100)));

@@ -20,6 +20,10 @@ public class Rational implements SimpleNumber {
 
 
 
+    public static boolean TRY_SHOW_AS_DECIMAL = false;
+
+
+
     @NotNull
     public final BigInteger n,d;
 
@@ -61,6 +65,26 @@ public class Rational implements SimpleNumber {
 
     @Override
     public String toString() {
+        if(d.equals(BigInteger.ONE)) return n.toString();
+
+        if(TRY_SHOW_AS_DECIMAL) {
+            BigInteger factor = BigDecimalMath.getFactorToPowerOfTen(d);
+            if(factor != null) {
+                BigInteger nf = n.multiply(factor), df = d.multiply(factor);
+                String nStr = nf.toString();
+                if(n.compareTo(d) < 0) {
+                    if(nStr.length() < Real.getPrecision())
+                        return "0." + nStr;
+                    return "0." + nStr.substring(0, Real.getPrecision()) + "...";
+                }
+
+                int powerOfTen = BigDecimalMath.log(BigInteger.TEN, df);
+                String suffix = nStr.length() >= powerOfTen + Real.getPrecision() ? "..." : "";
+                return nStr.substring(0, nStr.length() - powerOfTen) + "." +
+                        nStr.substring(powerOfTen + 1, Math.min(nStr.length(), powerOfTen + Real.getPrecision())) + suffix;
+            }
+        }
+
         return n + (d.equals(BigInteger.ONE) ? "" : "/"+d);
     }
 

@@ -49,6 +49,7 @@ public final class Functions {
     public static final Expression.Function ARGUMENT = new HardcodedFunction("arg", Functions::argument);
     public static final Expression.Function GET = new HardcodedFunction("get", Functions::get);
     public static final Expression.Function SIZE = new HardcodedFunction("size", Functions::size);
+    public static final Expression.Function NORMALIZE = new HardcodedFunction("norm", Functions::normalize);
     public static final Expression.Function CROSS = new HardcodedFunction("cross", Functions::cross);
     public static final Expression.Function RAD_TO_DEG = new HardcodedFunction("deg", Functions::radToDeg);
     public static final Expression.Function DEG_TO_RAD = new HardcodedFunction("rad", Functions::degToRad);
@@ -168,8 +169,7 @@ public final class Functions {
     public static Number sin(Complex x) {
         if(x.isReal())
             return sin(x.re);
-        Number xi = x.multiply(I());
-        return exp(xi).subtract(exp(xi.negate())).divide(I().multiply(2));
+        return im(exp(x));
     }
 
 
@@ -200,8 +200,7 @@ public final class Functions {
     public static Number cos(Complex x) {
         if(x.isReal())
             return cos(x.re);
-        Number xi = x.multiply(I());
-        return exp(xi).add(exp(xi.negate())).divide(2);
+        return re(exp(x));
     }
 
     public static Number tan(Number x) {
@@ -364,7 +363,7 @@ public final class Functions {
     public static Number exp(Complex x) {
         if(x.isReal())
             return exp(x.re);
-        return Complex.fromPolar(x.theta(), exp(x.re));
+        return Complex.fromPolar(x.im, exp(x.re));
     }
 
 
@@ -435,6 +434,26 @@ public final class Functions {
         };
     }
 
+    public static Number re(Number x) {
+        return switch(x) {
+            case SimpleNumber n -> n;
+            case Complex c -> c.re;
+            case Vector v -> v.derive(Functions::re);
+            case Expression.Function f -> f.derive("re", "re($1,$2)", PRE, Functions::re);
+            default -> throw new UnsupportedOperationException();
+        };
+    }
+
+    public static Number im(Number x) {
+        return switch(x) {
+            case SimpleNumber n -> n;
+            case Complex c -> c.im;
+            case Vector v -> v.derive(Functions::im);
+            case Expression.Function f -> f.derive("im", "im($1,$2)", PRE, Functions::im);
+            default -> throw new UnsupportedOperationException();
+        };
+    }
+
 
     public static Number cross(Number a, Number b) {
         if(a instanceof Expression.Function f)
@@ -463,6 +482,16 @@ public final class Functions {
         if(x instanceof Expression.Function f)
             return f.derive("size", "size($x)", PRE, Functions::size);
         return x instanceof Vector v ? new Rational(v.size()) : ONE();
+    }
+
+    public static Number normalize(Number x) {
+        return switch(x) {
+            case Vector v -> v.normalize();
+            case Complex c -> c.normalize();
+            case Expression.Function f -> f.derive("norm", "norm($x)", PRE, Functions::normalize);
+            case SimpleNumber n -> n.greaterThan(ZERO()).subtract(n.lessThan(ZERO()));
+            default -> throw new UnsupportedOperationException(""+x);
+        };
     }
 
 

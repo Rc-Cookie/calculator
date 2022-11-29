@@ -1,0 +1,48 @@
+package com.github.rccookie.math.calculator;
+
+import java.util.Map;
+import java.util.function.BiConsumer;
+
+import com.github.rccookie.math.Number;
+import com.github.rccookie.math.Rational;
+import com.github.rccookie.math.Real;
+import com.github.rccookie.math.expr.Expression;
+import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.util.Utils;
+
+public interface FormulaPackage {
+
+    FormulaPackage PHYSICS = new FormulaPackageImpl(
+            "g", new Real(9.81, false, false),
+            "c", new Rational(299792458),
+            "h", new Real(6.62607015, -34, true, false),
+            "E", new Real(1.602176634, -19, true, false),
+            "m_e", new Real(9.109383701528, -31, false, false),
+            "N_a", new Real(6.02214076, 23, false, false),
+            "\u00B50", new Real(1.2566370621219, -6, false, false),
+            "ep_0", new Real(8.854187812813, -12, false, false),
+            "k", new Real(1.380649, -23, false, false),
+            "G", new Real(6.673, -11, false, false),
+
+            "F_g", Expression.parse("(m1,m2,d) -> -G * m1 * m2 / (d*d) * (norm(d))"),
+            "F_z", Expression.parse("(m,r,v) -> m * v * v / r"),
+            "F_s", Expression.parse("(R,dx) -> -R / d"),
+
+            "F_cw", Expression.parse("(A,cw,rho,v) -> -A/2 * cw * rho * v * v"),
+            "F_r", Expression.parse("(F_n,\u00B5) -> |F_n * \u00B5|"),
+
+            "lorenz", Expression.parse("v -> 1 / (sqrt(1 - (v/c)^2)")
+    );
+
+    Map<String, FormulaPackage> PACKAGES = Utils.map(
+            "physics", PHYSICS
+    );
+
+
+    void forEach(BiConsumer<? super String, ? super Number> action);
+
+
+    default void addTo(SymbolLookup lookup) {
+        forEach(lookup::put);
+    }
+}

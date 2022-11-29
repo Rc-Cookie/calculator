@@ -70,8 +70,9 @@ public interface Expression extends Number {
 
     int precedence();
 
-    default String toString(int parentPrecedence) {
-        return parentPrecedence < precedence() ? toString() : "("+this+")";
+    default String toString(int parentPrecedence, boolean left) {
+        int precedence = precedence();
+        return parentPrecedence < precedence || (left & parentPrecedence == precedence) ? toString() : "("+this+")";
     }
 
     default String toTreeString() {
@@ -234,12 +235,13 @@ public interface Expression extends Number {
 
 
     default String format(String format, Expression x) {
-        return format.replace("$x", x.toString(precedence()));
+        return format.replace("$x", x.toString(precedence(), false));
     }
 
     default String format(String format, Expression a, Expression b) {
         int precedence = precedence();
-        return format.replace("$1", a.toString(precedence)).replace("$2", b.toString(precedence));
+        boolean leftIs1 = format.indexOf("$1") < format.indexOf("$2");
+        return format.replace("$1", a.toString(precedence, leftIs1)).replace("$2", b.toString(precedence, !leftIs1));
     }
 
 

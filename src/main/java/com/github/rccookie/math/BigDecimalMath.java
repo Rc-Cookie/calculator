@@ -8,6 +8,10 @@ import java.security.ProviderException;
 import java.util.Collections;
 import java.util.Vector;
 
+import com.github.rccookie.util.Console;
+
+import org.jetbrains.annotations.Nullable;
+
 
 /** BigDecimal special functions.
  * <a href="http://arxiv.org/abs/0908.3030">A Java Math.BigDecimal Implementation of Core Mathematical Functions</a>
@@ -4744,4 +4748,76 @@ public final class BigDecimalMath
                     }
             }
     } /* Prime */
+
+
+    private static final BigInteger FIVE = BigInteger.valueOf(5);
+
+    /**
+     * For a positive integer x, this method computes the smallest factor
+     * f such that <code>x * f = 10^n</code>, if such a factor exists. Otherwise,
+     * the method returns <code>null</code>.
+     *
+     * @param x A positive number
+     * @return The factor f, or <code>null</code> if it does not exist
+     */
+    @Nullable
+    public static BigInteger getFactorToPowerOfTen(BigInteger x) {
+        if(x.compareTo(BigInteger.ONE) == 0)
+            return BigInteger.ONE;
+
+        if(x.compareTo(BigInteger.ZERO) <= 0)
+            throw new ArithmeticException("Positive number expected");
+
+        BigInteger[] res;
+        int twoCount = 0, fiveCount = 0;
+
+        // Factor exists <=> prime factorization only consists of 2s and 5s
+        while(!x.testBit(0)) { // <=> x % 2 == 0
+            x = x.shiftRight(1); // <=> x /= 2
+            twoCount++;
+        }
+        while((res = x.divideAndRemainder(FIVE))[1].compareTo(BigInteger.ZERO) == 0) { // <=> x % 5 == 0
+            x = res[0]; // <=> x /= 5
+            fiveCount++;
+        }
+
+        // Other prime factors exist
+        if(x.compareTo(BigInteger.ONE) != 0) return null;
+
+        // Every 2*5 can be ignored, because it becomes a multiple of 10
+        if(twoCount == fiveCount) return BigInteger.ONE;
+        if(twoCount > fiveCount)
+            return FIVE.pow(twoCount - fiveCount);
+        return BigInteger.ONE.shiftLeft(fiveCount - twoCount);  // <=> 2^fiveCount
+    }
+
+    /**
+     * Computes <code>floor(log(base,x))</code>.
+     *
+     * @param base A positive integer
+     * @param x A positive integer
+     * @return The logarithm
+     */
+    public static int log(BigInteger base, BigInteger x) {
+        if(base.compareTo(BigInteger.ZERO) <= 0 || x.compareTo(BigInteger.ZERO) <= 0)
+            throw new ArithmeticException("Positive numbers expected");
+
+        int log = 0;
+        while(x.compareTo(base) >= 0) {
+            x = x.divide(base);
+            log++;
+        }
+        return log;
+    }
+
+
+    public static void main(String[] args) {
+        while(true) {
+            BigInteger in = new BigInteger(Console.input(">"));
+            BigInteger factor = getFactorToPowerOfTen(in);
+            Console.log(factor);
+            if(factor != null)
+                Console.log(in.multiply(factor));
+        }
+    }
 } /* com.github.rccookie.math.BigDecimalMath */

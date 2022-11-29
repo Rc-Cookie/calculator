@@ -40,7 +40,7 @@ public class Vector implements Number {
     @Override
     public boolean equals(Object obj) {
         return (obj instanceof Vector v && Arrays.equals(components, v.components)) ||
-               (components.length == 1 && obj instanceof Number && components[0].equals(obj));
+               (obj instanceof Number n && Arrays.stream(components).allMatch(n::equals));
     }
 
     @Override
@@ -124,6 +124,12 @@ public class Vector implements Number {
 
     public boolean isScalar() {
         return components.length == 1;
+    }
+
+    public boolean isZero() {
+        for(Number c : components)
+            if(!c.equals(Number.ZERO())) return false;
+        return true;
     }
 
     @Override
@@ -242,8 +248,13 @@ public class Vector implements Number {
     }
 
     @Override
-    public @NotNull Number invert() {
+    public @NotNull Vector invert() {
         return derive(Number::invert);
+    }
+
+    public @NotNull Vector normalize() {
+        if(isZero()) return this;
+        return divide(abs());
     }
 
 

@@ -56,6 +56,17 @@ public class Complex implements Number {
         return im.equals(Number.ZERO());
     }
 
+    public boolean precise() {
+        return !(re instanceof Real r1 && !r1.precise) &&
+               !(im instanceof Real r2 && !r2.precise);
+    }
+
+    public Complex normalize() {
+        if(re.equals(Number.ZERO()) && im.equals(Number.ZERO()))
+            return this;
+        return (Complex) divide(abs());
+    }
+
     @Override
     public @NotNull Number add(Number x) {
         return switch(x) {
@@ -97,7 +108,6 @@ public class Complex implements Number {
 
     @Override
     public @NotNull Number divide(Number x) {
-        // (a+ib)/(c+id) = (ac+bd)/(c²+d²) + i(bc-ad)/(c²+d²)
         return switch(x) {
             case SimpleNumber n -> new Complex(re.divide(n), im.divide(n));
             case Complex c -> divide(c);
@@ -106,6 +116,8 @@ public class Complex implements Number {
     }
 
     public @NotNull Complex divide(Complex x) {
+        // (a+ib)/(c+id) = (ac+bd)/(c²+d²) + i(bc-ad)/(c²+d²)
+        // b = 0   ->    = (ac+0d)/(c²+d²) + i(0c-ad)/(c²+d²) = ac/(c²+d²) - iad/(c²+d²)
         SimpleNumber d = x.sqrAbs();
         return new Complex(
                 re.multiply(x.re).add(im.multiply(x.im)).divide(d),
@@ -115,7 +127,7 @@ public class Complex implements Number {
     @Override
     public @NotNull Number divideOther(Number x) {
         return switch(x) {
-            case SimpleNumber n -> new Complex(re.divideOther(n), im.divideOther(n));
+            case SimpleNumber n -> new Complex(n).divide(this);
             case Complex c -> c.divide(this);
             default -> x.divide(this);
         };

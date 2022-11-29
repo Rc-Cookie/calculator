@@ -23,7 +23,7 @@ record ImplicitOperationImpl(Expression a, Expression b)
     @Override
     public String toString() {
         if(a instanceof Numeric || a instanceof Builder.VectorExpression) {
-            String as = a.toString(precedence()), bs = b.toString(precedence());
+            String as = a.toString(precedence(), true), bs = b.toString(precedence(), false);
             if(endIsClear(as) || startIsClear(bs))
                 return as + bs;
             return as + "*" + bs;
