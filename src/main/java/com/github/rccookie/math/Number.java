@@ -1,8 +1,5 @@
 package com.github.rccookie.math;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.github.rccookie.math.expr.SymbolLookup;
 
 import org.jetbrains.annotations.NotNull;
@@ -14,14 +11,15 @@ public interface Number {
     @NotNull static SimpleNumber MINUS_ONE() { return Rational.MINUS_ONE; }
     @NotNull static SimpleNumber TWO() { return Rational.TWO; }
     @NotNull static SimpleNumber HALF() { return Rational.HALF; }
-    @NotNull static SimpleNumber ABOUT_ONE() { return Real.ABOUT_ONE; }
-    @NotNull static SimpleNumber PI() { return Real.PI; }
-    @NotNull static SimpleNumber E() { return Real.E; }
+    @NotNull static SimpleNumber ABOUT_ZERO() { return Rational.ABOUT_ZERO; }
+    @NotNull static SimpleNumber ABOUT_ONE() { return Rational.ABOUT_ONE; }
+    @NotNull static SimpleNumber PI() { return Rational.PI; }
+    @NotNull static SimpleNumber E() { return Rational.E; }
 
     @NotNull static Complex I() { return Complex.I; }
 
-    @NotNull static SimpleNumber RAD_TO_DEG() { return Real.RAD_TO_DEG; }
-    @NotNull static SimpleNumber DEG_TO_RAD() { return Real.DEG_TO_RAD; }
+    @NotNull static SimpleNumber RAD_TO_DEG() { return Rational.RAD_TO_DEG; }
+    @NotNull static SimpleNumber DEG_TO_RAD() { return Rational.DEG_TO_RAD; }
 
 
 
@@ -35,7 +33,7 @@ public interface Number {
 
     @NotNull
     default Number add(double x) {
-        return add(new Real(x));
+        return add(new Rational(x));
     }
 
     @NotNull
@@ -48,7 +46,7 @@ public interface Number {
 
     @NotNull
     default Number subtract(double x) {
-        return subtract(new Real(x));
+        return subtract(new Rational(x));
     }
 
     @NotNull
@@ -61,7 +59,7 @@ public interface Number {
 
     @NotNull
     default Number subtractFrom(double x) {
-        return subtractFrom(new Real(x));
+        return subtractFrom(new Rational(x));
     }
 
     @NotNull
@@ -74,7 +72,7 @@ public interface Number {
 
     @NotNull
     default Number multiply(double x) {
-        return multiply(new Real(x));
+        return multiply(new Rational(x));
     }
 
     @NotNull
@@ -87,7 +85,7 @@ public interface Number {
 
     @NotNull
     default Number divide(double x) {
-        return divide(new Real(x));
+        return divide(new Rational(x));
     }
 
     @NotNull
@@ -100,7 +98,7 @@ public interface Number {
 
     @NotNull
     default Number divideOther(double x) {
-        return divideOther(new Real(x));
+        return divideOther(new Rational(x));
     }
 
     @NotNull
@@ -113,7 +111,7 @@ public interface Number {
 
     @NotNull
     default Number raise(double x) {
-        return raise(new Real(x));
+        return raise(new Rational(x));
     }
 
     @NotNull
@@ -126,7 +124,7 @@ public interface Number {
 
     @NotNull
     default Number raiseOther(double x) {
-        return raiseOther(new Real(x));
+        return raiseOther(new Rational(x));
     }
 
     @NotNull
@@ -162,49 +160,49 @@ public interface Number {
 
 
 
-    @NotNull
-    static Number parse(String str) {
-        if(str.startsWith("[") || str.contains(",")) {
-            if(str.charAt(0) == '[' && str.charAt(str.length()-1) == ']')
-                str = str.substring(1, str.length()-1);
-            str = str.replace(" ", "");
-
-            List<Number> components = new ArrayList<>();
-            StringBuilder s = new StringBuilder(str);
-            StringBuilder num = new StringBuilder();
-            int d = 0;
-            while(!s.isEmpty()) {
-                char c = s.charAt(0);
-                s.deleteCharAt(0);
-                if(d == 0 && c == ',') {
-                    if(s.isEmpty())
-                        throw new NumberFormatException("Trailing comma");
-                    components.add(parse(num.toString()));
-                    num.delete(0, num.length());
-                }
-                else {
-                    num.append(c);
-                    if(c == '[') d++;
-                    else if(c == ']' && --d == 0) {
-                        if(!s.isEmpty() && s.charAt(0) != ',')
-                            throw new NumberFormatException("',' expected between vector components");
-                        components.add(parse(num.toString()));
-                        num.delete(0, num.length());
-                    }
-                }
-            }
-            if(!num.isEmpty())
-                components.add(parse(num.toString()));
-            return new Vector(components.toArray(new Number[0]));
-        }
-        if(str.contains("."))
-            return new Real(Double.parseDouble(str));
-        int i = str.indexOf('/');
-        if(i == -1)
-            return new Rational(Long.parseLong(str));
-        return new Rational(Long.parseLong(str, 0, i, 10),
-                Long.parseLong(str, i+1, str.length(), 10));
-    }
+//    @NotNull
+//    static Number parse(String str) {
+//        if(str.startsWith("[") || str.contains(",")) {
+//            if(str.charAt(0) == '[' && str.charAt(str.length()-1) == ']')
+//                str = str.substring(1, str.length()-1);
+//            str = str.replace(" ", "");
+//
+//            List<Number> components = new ArrayList<>();
+//            StringBuilder s = new StringBuilder(str);
+//            StringBuilder num = new StringBuilder();
+//            int d = 0;
+//            while(!s.isEmpty()) {
+//                char c = s.charAt(0);
+//                s.deleteCharAt(0);
+//                if(d == 0 && c == ',') {
+//                    if(s.isEmpty())
+//                        throw new NumberFormatException("Trailing comma");
+//                    components.add(parse(num.toString()));
+//                    num.delete(0, num.length());
+//                }
+//                else {
+//                    num.append(c);
+//                    if(c == '[') d++;
+//                    else if(c == ']' && --d == 0) {
+//                        if(!s.isEmpty() && s.charAt(0) != ',')
+//                            throw new NumberFormatException("',' expected between vector components");
+//                        components.add(parse(num.toString()));
+//                        num.delete(0, num.length());
+//                    }
+//                }
+//            }
+//            if(!num.isEmpty())
+//                components.add(parse(num.toString()));
+//            return new Vector(components.toArray(new Number[0]));
+//        }
+//        if(str.contains("."))
+//            return new Real(Double.parseDouble(str));
+//        int i = str.indexOf('/');
+//        if(i == -1)
+//            return new Rational(Long.parseLong(str));
+//        return new Rational(Long.parseLong(str, 0, i, 10),
+//                Long.parseLong(str, i+1, str.length(), 10));
+//    }
 
 
 

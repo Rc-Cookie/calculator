@@ -96,8 +96,9 @@ public class Vector implements Number {
     public Number get(Number index) {
         return switch(index) {
             case Vector indices -> get(indices);
-            case Real r -> get(r.value.intValue());
-            case Rational r -> get(new Real(r, false).value.intValue());
+            case SimpleNumber n -> get((int) n.toDouble());
+//            case Real r -> get(r.value.intValue());
+//            case Rational r -> get(new Real(r, false).value.intValue());
             default -> throw new UnsupportedOperationException();
         };
     }

@@ -6,7 +6,6 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import com.github.rccookie.math.Number;
-import com.github.rccookie.math.Real;
 
 sealed interface Token {
 
@@ -26,7 +25,7 @@ sealed interface Token {
     Operator ABS       = new Operator("abs", -10, true, s -> new Abs(s.pop()));
 
     Operator DEGREE  = new Operator("\u00B0", 120, x -> x.multiply(Number.DEG_TO_RAD()));
-    Operator PERCENT = new Operator("%", 120, x -> x.divide(new Real(100)));
+    Operator PERCENT = new Operator("%", 120, x -> (Expression) x.divide(100));
     Operator SQUARE  = new Operator("\u00B2", POWER.precedence, x -> x.multiply(x));
     Operator CUBE    = new Operator("\u00B3", POWER.precedence, x -> x.multiply(x).multiply(x));
 

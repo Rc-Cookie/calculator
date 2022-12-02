@@ -6,7 +6,6 @@ import java.util.Set;
 import java.util.Stack;
 
 import com.github.rccookie.math.Rational;
-import com.github.rccookie.math.Real;
 import com.github.rccookie.util.StepIterator;
 
 class Lexer extends StepIterator<Token> {
@@ -138,13 +137,13 @@ class Lexer extends StepIterator<Token> {
                 p++;
                 yield Token.GREATER_OR_EQUAL;
             }
-            case '.' -> new Token.NumberToken(new Real(new BigDecimal("0." + readInt(true))));
+            case '.' -> new Token.NumberToken(new Rational(new BigDecimal("0." + readInt(true))));
             case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
                 String num = c + readInt(false);
                 if(src[p] != '.')
                     yield new Token.NumberToken(new Rational(new BigInteger(num)));
                 p++;
-                yield new Token.NumberToken(new Real(new BigDecimal(num + '.' + readInt(false))));
+                yield new Token.NumberToken(new Rational(new BigDecimal(num + '.' + readInt(false))));
             }
             default -> {
                 if(!isIdentifierChar(c))

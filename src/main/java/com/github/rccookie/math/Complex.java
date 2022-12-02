@@ -56,9 +56,11 @@ public class Complex implements Number {
         return im.equals(Number.ZERO());
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean precise() {
-        return !(re instanceof Real r1 && !r1.precise) &&
-               !(im instanceof Real r2 && !r2.precise);
+//        return !(re instanceof Real r1 && !r1.precise) &&
+//               !(im instanceof Real r2 && !r2.precise);
+        return re.precise() && im.precise();
     }
 
     public Complex normalize() {

@@ -4,8 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
 
-import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
+import com.github.rccookie.math.Number;
 
 public interface SymbolLookup {
 

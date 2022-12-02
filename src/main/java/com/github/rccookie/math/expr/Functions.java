@@ -7,10 +7,9 @@ import java.nio.charset.CharsetEncoder;
 import java.util.function.BinaryOperator;
 
 import com.github.rccookie.math.BigDecimalMath;
+import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
-import com.github.rccookie.math.Rational;
-import com.github.rccookie.math.Real;
 import com.github.rccookie.math.SimpleNumber;
 import com.github.rccookie.math.Vector;
 import com.github.rccookie.math.solve.Polynom;
@@ -61,7 +60,7 @@ public final class Functions {
     public static final Expression.Function ANTIDERIVATIVE = new HardcodedFunction("antiDer", (l,p) -> antiderivative(l,p[0],p[1],p[2]), "p", "deg", "ind");
     public static final Expression.Function INTEGRATE = new HardcodedFunction("int", (l,p) -> integrate(l,p[0],p[1],p[2],p[3]), "p", "a", "b", "ind");
 
-    private static final Number LN_2 = ln(new Real(2));
+    private static final Number LN_2 = ln(new Rational(2));
 
     private static final int PRE = Token.MULTIPLY.precedence();
 
@@ -109,8 +108,9 @@ public final class Functions {
 
     public static Number floor(Number x) {
         return switch(x) {
-            case Rational f -> new Rational(f.n.divide(f.d));
-            case Real d -> new Real(d.value.setScale(0, RoundingMode.DOWN), d.precise);
+            case Rational r -> new Rational(r.n.divide(r.d));
+//            case Rational f -> new Rational(f.n.divide(f.d));
+//            case Real d -> new Real(d.value.setScale(0, RoundingMode.DOWN), d.precise);
             case Complex c -> new Complex((SimpleNumber) floor(c.re), (SimpleNumber) floor(c.im));
             case Vector v -> v.derive(Functions::floor);
             case Expression.Function f -> f.derive("floor", "floor($x)", PRE, Functions::floor);
@@ -120,8 +120,9 @@ public final class Functions {
 
     public static Number ceil(Number x) {
         return switch(x) {
-            case Rational f -> new Rational(f.n.add(f.d).subtract(BigInteger.ONE).divide(f.d));
-            case Real d -> new Real(d.value.setScale(0, RoundingMode.UP), d.precise);
+            case Rational r -> new Rational(r.n.add(r.d).subtract(BigInteger.ONE).divide(r.d));
+//            case Rational f -> new Rational(f.n.add(f.d).subtract(BigInteger.ONE).divide(f.d));
+//            case Real d -> new Real(d.value.setScale(0, RoundingMode.UP), d.precise);
             case Complex c -> new Complex((SimpleNumber) ceil(c.re), (SimpleNumber) ceil(c.im));
             case Vector v -> v.derive(Functions::ceil);
             case Expression.Function f -> f.derive("ceil", "ceil($x)", PRE, Functions::ceil);
@@ -131,8 +132,9 @@ public final class Functions {
 
     public static Number round(Number x) {
         return switch(x) {
-            case Rational r -> new Rational(new Real(r).value.setScale(0, RoundingMode.HALF_UP).toBigInteger());
-            case Real d -> new Real(d.value.setScale(0, RoundingMode.HALF_UP), d.precise);
+            case Rational r -> new Rational(r.toBigDecimal().setScale(0, RoundingMode.HALF_UP));
+//            case Rational r -> new Rational(new Real(r).value.setScale(0, RoundingMode.HALF_UP).toBigInteger());
+//            case Real d -> new Real(d.value.setScale(0, RoundingMode.HALF_UP), d.precise);
             case Complex c -> new Complex((SimpleNumber) round(c.re), (SimpleNumber) round(c.im));
             case Vector v -> v.derive(Functions::round);
             case Expression.Function f -> f.derive("round", "round($x)", PRE, Functions::round);
@@ -154,16 +156,16 @@ public final class Functions {
 
     public static SimpleNumber sin(SimpleNumber x) {
         return switch(x) {
-            case Rational f -> sin(new Real(f));
-            case Real d -> sin(d);
+//            case Rational f -> sin(new Real(f));
+//            case Real d -> sin(d);
+            case Rational r -> sin(r);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
 
-    public static SimpleNumber sin(Real x) {
-        if(x.equals(Real.ZERO))
-            return Real.zero(x.precise);
-        return new Real(BigDecimalMath.sin(x.value), false);
+    public static SimpleNumber sin(Rational x) {
+        if(x.equals(Rational.ZERO)) return x;
+        return new Rational(BigDecimalMath.sin(x.toBigDecimal()), false);
     }
 
     public static Number sin(Complex x) {
@@ -185,16 +187,17 @@ public final class Functions {
 
     public static SimpleNumber cos(SimpleNumber x) {
         return switch(x) {
-            case Rational f -> cos(new Real(f));
-            case Real d -> cos(d);
+            case Rational r -> cos(r);
+//            case Rational f -> cos(new Real(f));
+//            case Real d -> cos(d);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
 
-    public static SimpleNumber cos(Real x) {
-        if(x.equals(Real.ZERO))
-            return Real.one(x.precise);
-        return new Real(BigDecimalMath.cos(x.value), false);
+    public static SimpleNumber cos(Rational x) {
+        if(x.equals(Rational.ZERO))
+            return Rational.ONE(x.precise);
+        return new Rational(BigDecimalMath.cos(x.toBigDecimal()), false);
     }
 
     public static Number cos(Complex x) {
@@ -211,8 +214,9 @@ public final class Functions {
 
     public static Number asin(Number x) {
         return switch(x) {
-            case Rational f -> asin(new Real(f));
-            case Real d -> asin(d);
+            case Rational r -> asin(r);
+//            case Rational f -> asin(new Real(f));
+//            case Real d -> asin(d);
             case Complex c -> asin(c);
             case Vector v -> v.derive(Functions::asin);
             case Expression.Function f -> f.derive("asin", "asin($x)", PRE, Functions::asin);
@@ -220,11 +224,11 @@ public final class Functions {
         };
     }
 
-    public static Number asin(Real x) {
-        if(x.equals(Real.MINUS_ONE)) return PI().divide(-2);
-        if(x.equals(Real.ZERO)) return x;
-        if(x.equals(Real.ONE)) return PI().divide(2);
-        return new Real(BigDecimalMath.asin(x.value), false);
+    public static Number asin(Rational x) {
+        if(x.equals(Rational.MINUS_ONE)) return PI().divide(-2);
+        if(x.equals(Rational.ZERO)) return x;
+        if(x.equals(Rational.ONE)) return PI().divide(2);
+        return new Rational(BigDecimalMath.asin(x.toBigDecimal()), false);
     }
 
     public static Number asin(Complex x) {
@@ -241,8 +245,9 @@ public final class Functions {
 
     public static Number acos(Number x) {
         return switch(x) {
-            case Rational f -> acos(new Real(f));
-            case Real d -> acos(d);
+//            case Rational f -> acos(new Real(f));
+//            case Real d -> acos(d);
+            case Rational r -> acos(r);
             case Complex c -> acos(c);
             case Vector v -> v.derive(Functions::acos);
             case Expression.Function f -> f.derive("acos", "acos($x)", PRE, Functions::acos);
@@ -250,11 +255,11 @@ public final class Functions {
         };
     }
 
-    public static Number acos(Real x) {
-        if(x.equals(Real.ONE)) return Real.zero(x.precise);
-        if(x.equals(Real.ZERO)) return PI().divide(2);
-        if(x.equals(Real.MINUS_ONE)) return PI();
-        return new Real(BigDecimalMath.acos(x.value), false);
+    public static Number acos(Rational x) {
+        if(x.equals(Rational.ONE)) return Rational.ZERO(x.precise);
+        if(x.equals(Rational.ZERO)) return PI().divide(2);
+        if(x.equals(Rational.MINUS_ONE)) return PI();
+        return new Rational(BigDecimalMath.acos(x.toBigDecimal()), false);
     }
 
     public static Number acos(Complex x) {
@@ -282,14 +287,15 @@ public final class Functions {
 
     public static SimpleNumber atan(SimpleNumber x) {
         return switch(x) {
-            case Rational r -> atan(new Real(r));
-            case Real r -> atan(r);
+//            case Rational r -> atan(new Real(r));
+//            case Real r -> atan(r);
+            case Rational r -> atan(r);
             default -> throw new UnsupportedOperationException(""+x);
         };
     }
 
-    public static SimpleNumber atan(Real x) {
-        return new Real(BigDecimalMath.atan(x.value), false);
+    public static SimpleNumber atan(Rational x) {
+        return new Rational(BigDecimalMath.atan(x.toBigDecimal()), false);
     }
 
     public static Number atan(Complex x) {
@@ -342,23 +348,24 @@ public final class Functions {
 
     public static SimpleNumber exp(SimpleNumber x) {
         return switch(x) {
-            case Real r -> exp(r);
+//            case Real r -> exp(r);
+//            case Rational r -> exp(r);
             case Rational r -> exp(r);
             default -> throw new UnsupportedOperationException();
         };
     }
 
-    public static SimpleNumber exp(Real x) {
-        if(x.equals(Real.ZERO))
-            return Real.one(x.precise);
-        return new Real(BigDecimalMath.exp(x.value), false);
+    public static SimpleNumber exp(Rational x) {
+        if(x.equals(Rational.ZERO))
+            return Rational.ONE(x.precise);
+        return new Rational(BigDecimalMath.exp(x.toBigDecimal()), false);
     }
 
-    public static SimpleNumber exp(Rational x) {
-        if(x.n.equals(BigInteger.ZERO))
-            return ONE();
-        return new Real(Math.exp(x.toDouble()), false);
-    }
+//    public static SimpleNumber exp(Rational x) {
+//        if(x.n.equals(BigInteger.ZERO))
+//            return ONE();
+//        return new Real(Math.exp(x.toDouble()), false);
+//    }
 
     public static Number exp(Complex x) {
         if(x.isReal())
@@ -369,8 +376,9 @@ public final class Functions {
 
     public static Number ln(Number x) {
         return switch(x) {
-            case Real d -> ln(d);
-            case Rational f -> ln(f);
+            case Rational r -> ln(r);
+//            case Real d -> ln(d);
+//            case Rational f -> ln(f);
             case Complex c -> ln(c);
             case Vector v -> v.derive(Functions::ln);
             case Expression.Function f -> f.derive("ln", "ln($x)", PRE, Functions::ln);
@@ -378,25 +386,25 @@ public final class Functions {
         };
     }
 
-    public static Number ln(Real x) {
-        if(x.equals(Number.ZERO()))
-            throw new ArithmeticException("ln 0 is undefined");
-        if(x.equals(Real.ONE))
-            return Real.zero(x.precise);
-        if(x.lessThan(ZERO()).equals(ONE()))
-            return ln(new Complex(x));
-        return new Real(BigDecimalMath.log(x.value), false);
-    }
-
     public static Number ln(Rational x) {
         if(x.equals(Number.ZERO()))
             throw new ArithmeticException("ln 0 is undefined");
-        if(x.n.equals(x.d))
-            return ZERO();
+        if(x.equals(Rational.ONE))
+            return Rational.ZERO(x.precise);
         if(x.lessThan(ZERO()).equals(ONE()))
             return ln(new Complex(x));
-        return new Real(Math.log(x.toDouble()), false);
+        return new Rational(BigDecimalMath.log(x.toBigDecimal()), false);
     }
+
+//    public static Number ln(Rational x) {
+//        if(x.equals(Number.ZERO()))
+//            throw new ArithmeticException("ln 0 is undefined");
+//        if(x.n.equals(x.d))
+//            return ZERO();
+//        if(x.lessThan(ZERO()).equals(ONE()))
+//            return ln(new Complex(x));
+//        return new Real(Math.log(x.toDouble()), false);
+//    }
 
     public static Number ln(Complex x) {
         //noinspection EqualsBetweenInconvertibleTypes

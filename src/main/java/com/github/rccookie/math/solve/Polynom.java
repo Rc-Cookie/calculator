@@ -7,8 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.github.rccookie.math.Number;
-import com.github.rccookie.math.Rational;
-import com.github.rccookie.math.Real;
+import com.github.rccookie.math.SimpleNumber;
 import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.SymbolLookup;
 
@@ -192,7 +191,7 @@ public interface Polynom extends Expression.Function {
                 s.name().equals(indeterminant)) {
             Number exp = ((BinaryOperation) product).b().evaluate(lookup);
             double dExp;
-            if(!(exp instanceof Rational || exp instanceof Real) || (dExp = exp.toDouble()) != (int) dExp || dExp < 0)
+            if(!(exp instanceof SimpleNumber) || (dExp = exp.toDouble()) != (int) dExp || dExp < 0)
                 throw new IllegalArgumentException("Illegal polynom expression: non-natural indeterminant exponent");
             return (int) dExp;
         }

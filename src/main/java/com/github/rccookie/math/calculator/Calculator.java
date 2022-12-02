@@ -6,13 +6,12 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
-import java.util.stream.Collectors;
 
 import com.github.rccookie.json.JsonObject;
 import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
-import com.github.rccookie.math.Real;
+import com.github.rccookie.math.SimpleNumber;
 import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.Functions;
 import com.github.rccookie.math.expr.SymbolLookup;
@@ -26,8 +25,7 @@ public class Calculator {
 
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
             "precision", 50,
-            "scientific", false,
-            "showAsDecimal", true
+            "scientific", false
     );
 
 
@@ -37,6 +35,8 @@ public class Calculator {
             "i", Number.I(),
             "dec", Number.ABOUT_ONE(),
             "ans", new Rational(42),
+            "true", Number.ONE(),
+            "false", Number.ZERO(),
 
             "min", Functions.MIN,
             "max", Functions.MAX,
@@ -76,20 +76,14 @@ public class Calculator {
             "int", Functions.INTEGRATE
     );
     private static final Map<String, Number> OPTIONAL_DEFAULT_VARS = Utils.map(
-            "precision", new Rational(Real.getPrecision()),
-            "scientific", Real.SCIENTIFIC_NOTATION ? Number.ONE() : Number.ZERO(),
-            "showAsDecimal", Rational.TRY_SHOW_AS_DECIMAL
-//            "g", new Real(9.81, false, false),
-//            "c", new Rational(299792458),
-//            "h", new Real(6.62607015, -34, true, false),
-//            "E", new Real(1.602176634, -19, true, false),
-//            "m_e", new Real(9.109383701528, -31, false, false),
-//            "N_a", new Real(6.02214076, 23, false, false),
-//            "\u00B50", new Real(1.2566370621219, -6, false, false),
-//            "ep_0", new Real(8.854187812813, -12, false, false),
-//            "k", new Real(1.380649, -23, false, false),
-//            "G", new Real(6.673, -11, false, false)
+            "precision", new Rational(Rational.getPrecision()),
+            "scientific", switch(Rational.getToStringMode()) {
+                case SMART, DECIMAL_IF_POSSIBLE, FORCE_FRACTION, FORCE_DECIMAL -> Number.ZERO();
+                default -> Number.ONE();
+            }
     );
+
+    private static final char ABOUT_EQUAL = Charset.defaultCharset().newEncoder().canEncode('\u2248') ? '\u2248' : '~';
 
     private final Lookup lookup = new Lookup();
     private String lastExpr = "ans";
@@ -142,30 +136,28 @@ public class Calculator {
                     evalCommand(calculator, "exit");
                 });
         parser.setName("""
-                        Java math interpreter - version 2.4
+                        Java math interpreter - version 2.5
                         By RcCookie""");
         parser.setDescription("Evaluate entered math expressions. Evaluate '\\help' to show expressions help");
         parser.parse(args);
 
         System.out.println("""
-                        Java math interpreter - version 2.4
+                        Java math interpreter - version 2.5
                         By RcCookie
                         -----------------------------------""");
-
-        Rational.TRY_SHOW_AS_DECIMAL = false;
 
         if(System.getProperty("os.name").toLowerCase().contains("windows"))
             checkReg();
 
         Calculator calculator = new Calculator();
         calculator.setVar("exit", new Rational(0));
+        Rational.setToStringMode(Rational.ToStringMode.SMART_SCIENTIFIC);
 
         Config config = Config.fromAppdataPath("Calculator");
         try {
             config.setDefaults(DEFAULT_SETTINGS);
             calculator.setVar("precision", new Rational(config.getInt("precision")));
             calculator.setVar("scientific", config.getBool("scientific") ? Number.ONE() : Number.ZERO());
-            calculator.setVar("showAsDecimal", config.getBool("showAsDecimal") ? Number.ONE() : Number.ZERO());
         } catch(Exception e) {
             System.err.println("Failed to load settings");
             if(Console.getFilter().isEnabled("debug"))
@@ -177,9 +169,11 @@ public class Calculator {
             System.out.print("> ");
             evalInput(calculator, Console.in.readLine());
 
-            config.set("precision", Real.getPrecision());
-            config.set("scientific", Real.SCIENTIFIC_NOTATION);
-            config.set("showAsDecimal", Rational.TRY_SHOW_AS_DECIMAL);
+            config.set("precision", Rational.getPrecision());
+            config.set("scientific", switch(Rational.getToStringMode()) {
+                case SMART, DECIMAL_IF_POSSIBLE, FORCE_FRACTION, FORCE_DECIMAL -> false;
+                default -> true;
+            });
         }
     }
 
@@ -189,17 +183,13 @@ public class Calculator {
             return;
         }
         Console.mapDebug("Charset", Charset.defaultCharset(), Charset.defaultCharset().newEncoder().canEncode('\u2248'));
-        String aboutEqual = (Charset.defaultCharset().newEncoder().canEncode('\u2248') ? '\u2248' : '~') + " ";
         for(String expr : expressions.split(";")) try {
             if(expr.startsWith("\\"))
                 evalCommand(calculator, expr.substring(1));
             else {
                 calculator.moreCount = 0;
                 Number res = calculator.evaluateSmart(expr);
-                if(res instanceof Expression && !(res instanceof Expression.Numbers))
-                    System.out.println(res);
-                else
-                    System.out.println(((res instanceof Real r && !r.precise) || (res instanceof Complex c && !c.precise()) ? aboutEqual : "= ") + res);
+                printRes(res, null);
             }
         } catch (Throwable t) {
             String msg = t.getMessage();
@@ -207,6 +197,23 @@ public class Calculator {
             if(Console.getFilter().isEnabled("debug"))
                 t.printStackTrace();
         }
+    }
+
+    private static void printRes(Number res, Rational.ToStringMode mode) {
+        if(res instanceof Expression && !(res instanceof Expression.Numbers))
+            System.out.println(res);
+        else if(res instanceof Rational r) {
+            Rational.DetailedToString str = mode != null ? r.detailedToString(mode) : r.detailedToString();
+            System.out.print(str.precise() ? '=' : ABOUT_EQUAL);
+            System.out.print(' ');
+            System.out.print(str.str());
+            if(str.precise() && !str.isFull())
+                System.out.print("...");
+            System.out.println();
+        }
+        else if(res instanceof SimpleNumber n && !n.precise() || res instanceof Complex c && !c.precise())
+            System.out.println(ABOUT_EQUAL + " " + res);
+        else System.out.println("= " + res);
     }
 
     private static void evalCommand(Calculator calculator, String cmd) {
@@ -239,17 +246,25 @@ public class Calculator {
                     System.out.println(res);
                 else {
                     String aboutEqual = (Charset.defaultCharset().newEncoder().canEncode('\u2248') ? '\u2248' : '~') + " ";
-                    int precision = Real.getPrecision();
-                    Real.setPrecision(precision << calculator.moreCount);
-                    System.out.println(((res instanceof Real r && !r.precise) || (res instanceof Complex c && !c.precise()) ? aboutEqual : "= ") + res);
-                    Real.setPrecision(precision);
+                    int precision = Rational.getPrecision();
+                    Rational.setPrecision(precision << calculator.moreCount);
+                    System.out.println(((res instanceof SimpleNumber n && !n.precise()) || (res instanceof Complex c && !c.precise()) ? aboutEqual : "= ") + res);
+                    Rational.setPrecision(precision);
                 }
+            }
+            case "frac" -> {
+                Number res = calculator.lookup.get("ans");
+                printRes(res, Rational.ToStringMode.FORCE_FRACTION);
+            }
+            case "dec" -> {
+                Number res = calculator.lookup.get("ans");
+                printRes(res, Rational.ToStringMode.FORCE_DECIMAL);
             }
             case "load" -> {
                 if(cmds.length != 2)
                     System.err.println("Usage: \\load <packageName>, i.e. \\load physics");
                 else if(!FormulaPackage.PACKAGES.containsKey(cmds[1].toLowerCase()))
-                    System.err.println("Unknown package " + cmds[1] + ", available: " + FormulaPackage.PACKAGES.keySet().stream().collect(Collectors.joining(", ")));
+                    System.err.println("Unknown package " + cmds[1] + ", available: " + String.join(", ", FormulaPackage.PACKAGES.keySet()));
                 else FormulaPackage.PACKAGES.get(cmds[1].toLowerCase()).addTo(calculator.lookup);
             }
             case "help" -> System.out.println("""
@@ -266,10 +281,11 @@ public class Calculator {
                      - Convert degrees to radians when writing ° symbol, i.e. 180° -> pi
                      - Convert percentage to normal number when writing % symbol, i.e. 10% -> 1/10
                      - Load packages of constants and formulas using \\load <name>, i.e. \\load physics
+                     - Force decimal or fraction rendering for the last result using \\dec / \\frac
+                     - Output more decimal places from the last result using \\more
                      - Use the variable 'ans' to refer to the previous result, or operate as if it was at the front of the expression
                      - Set the variable 'precision' to set the approximate decimal number precision (>1, default is 100)
                      - Set the variable 'scientific' to something other than 0 to enable scientific notation output
-                     - Set the variable 'showAsDecimal' to display fractions that can be converted to decimals as such, and the command \\more to display the last output with higher decimal count
                      - Set the variable 'exit' to a desired value to set the exit code of the program, exit with \\exit""");
             default -> System.out.println("Unknown command: '\\" + cmd + "'");
         }
@@ -321,7 +337,7 @@ public class Calculator {
             Number var = variables.get(name);
             if(var == null)
                 throw new IllegalArgumentException("Unknown variable or function: '" + name + "'");
-            return var instanceof Real r ? new Real(r.value, r.precise) : var; // Round high-precision constants
+            return var instanceof Rational r ? new Rational(r.toBigDecimal(), r.precise) : var; // Round high-precision constants
         }
 
         @Override
@@ -347,14 +363,21 @@ public class Calculator {
                 throw new IllegalArgumentException("Cannot override variable '"+name+"'");
             switch (name) {
                 case "precision" -> {
-                    double p = var.toDouble(this);
+                    int p = (int) var.toDouble(this);
                     if(p < 2)
                         throw new IllegalArgumentException("precision < 2");
-                    Real.setPrecision((int) p);
-                    var = new Rational((int) p);
+                    Rational.setPrecision(p);
+                    var = new Rational(p);
                 }
-                case "scientific" -> Real.SCIENTIFIC_NOTATION = !var.equals(Number.ZERO());
-                case "showAsDecimal" -> Rational.TRY_SHOW_AS_DECIMAL = !var.equals(Number.ZERO());
+                case "scientific" -> {
+                    boolean scientific = !var.equals(Number.ZERO());
+                    Rational.setToStringMode(switch(Rational.getToStringMode()) {
+                        case SMART, SMART_SCIENTIFIC -> scientific ? Rational.ToStringMode.SMART_SCIENTIFIC : Rational.ToStringMode.SMART;
+                        case DECIMAL_IF_POSSIBLE, DECIMAL_IF_POSSIBLE_SCIENTIFIC -> scientific ? Rational.ToStringMode.DECIMAL_IF_POSSIBLE_SCIENTIFIC : Rational.ToStringMode.DECIMAL_IF_POSSIBLE;
+                        case FORCE_FRACTION, FORCE_FRACTION_SCIENTIFIC -> scientific ? Rational.ToStringMode.FORCE_FRACTION_SCIENTIFIC : Rational.ToStringMode.FORCE_FRACTION;
+                        case FORCE_DECIMAL, FORCE_DECIMAL_SCIENTIFIC -> scientific ? Rational.ToStringMode.FORCE_DECIMAL_SCIENTIFIC : Rational.ToStringMode.FORCE_DECIMAL;
+                    });
+                }
             }
             variables.put(name, Arguments.checkNull(var, "var"));
         }

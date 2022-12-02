@@ -5,6 +5,8 @@ import org.jetbrains.annotations.NotNull;
 public interface SimpleNumber extends Number {
 
 
+    boolean precise();
+
     @Override
     default @NotNull Number add(Number x) {
         return x instanceof SimpleNumber n ? add(n) : x.add(this);
@@ -21,7 +23,7 @@ public interface SimpleNumber extends Number {
     @Override
     @NotNull
     default SimpleNumber add(double x) {
-        return add(new Real(x));
+        return add(new Rational(x));
     }
 
     @Override
@@ -40,7 +42,7 @@ public interface SimpleNumber extends Number {
     @Override
     @NotNull
     default SimpleNumber subtract(double x) {
-        return subtract(new Real(x));
+        return subtract(new Rational(x));
     }
 
     @Override
@@ -59,7 +61,7 @@ public interface SimpleNumber extends Number {
     @Override
     @NotNull
     default SimpleNumber subtractFrom(double x) {
-        return subtractFrom(new Real(x));
+        return subtractFrom(new Rational(x));
     }
 
     @Override
@@ -78,7 +80,7 @@ public interface SimpleNumber extends Number {
     @Override
     @NotNull
     default SimpleNumber multiply(double x) {
-        return multiply(new Real(x));
+        return multiply(new Rational(x));
     }
 
     @Override
@@ -97,7 +99,7 @@ public interface SimpleNumber extends Number {
     @Override
     @NotNull
     default SimpleNumber divide(double x) {
-        return divide(new Real(x));
+        return divide(new Rational(x));
     }
 
     @Override
@@ -116,7 +118,7 @@ public interface SimpleNumber extends Number {
     @Override
     @NotNull
     default SimpleNumber divideOther(double x) {
-        return divideOther(new Real(x));
+        return divideOther(new Rational(x));
     }
 
     @Override
