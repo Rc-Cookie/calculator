@@ -26,7 +26,7 @@ record ImplicitOperationImpl(Expression a, Expression b)
             String as = a.toString(precedence(), true), bs = b.toString(precedence(), false);
             if(endIsClear(as) || startIsClear(bs))
                 return as + bs;
-            return as + "*" + bs;
+            return as + '\u00B7' + bs;
         }
         return format("$x(" + b + ")", a);
     }
@@ -41,11 +41,10 @@ record ImplicitOperationImpl(Expression a, Expression b)
     }
 
     @Override
-    public Number evaluate(SymbolLookup lookup) {
-        Number name = a.evaluate(lookup);
-        if(name instanceof Expression.Function f)
+    public Number evaluateHalf(SymbolLookup lookup, Number funcOrElse) {
+        if(funcOrElse instanceof Expression.Function f)
             return f.evaluate(lookup, b.evaluate(lookup));
-        return a.multiply(b).evaluate(lookup);
+        return ((BinaryOperation) a.multiply(b)).evaluateHalf(lookup, funcOrElse);
     }
 
     @Override

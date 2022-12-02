@@ -65,7 +65,7 @@ public final class Unit {
 
     private void appendString(StringBuilder str, int u) {
         if(units[u] == 0) return;
-        str.append('*');
+        str.append('\u00B7');
         int c = Math.abs(units[u]);
         str.append(SiUnit.get(u).getSymbol());
         if(c != 1) appendSuperscript(str, c);

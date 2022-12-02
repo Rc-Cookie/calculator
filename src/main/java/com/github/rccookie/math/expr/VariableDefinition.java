@@ -9,9 +9,14 @@ record VariableDefinition(Expression nameExpr, String name, Expression expr) imp
     }
 
     @Override
-    public Number evaluate(SymbolLookup c) {
-        Number value = Expression.evaluate(expr, c);
-        c.put(name, value);
+    public Number evaluate(SymbolLookup lookup) {
+        return evaluateHalf(lookup, null);
+    }
+
+    @Override
+    public Number evaluateHalf(SymbolLookup lookup, Number ignored) {
+        Number value = Expression.evaluate(expr, lookup);
+        lookup.put(name, value);
         return value;
     }
 

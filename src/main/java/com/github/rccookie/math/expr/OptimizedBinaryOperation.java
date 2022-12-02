@@ -14,10 +14,9 @@ record OptimizedBinaryOperation(BinaryOperation base, Number optimize)
         implements Expression.BinaryOperation {
 
     @Override
-    public Number evaluate(SymbolLookup lookup) {
-        Number ea = a().evaluate(lookup);
+    public Number evaluateHalf(SymbolLookup lookup, Number ea) {
         if(ea.equals(optimize)) return ea;
-        return base.evaluate(lookup);
+        return base.evaluateHalf(lookup, ea);
     }
 
     @Override

@@ -99,7 +99,7 @@ class Lexer extends StepIterator<Token> {
                 p++;
                 yield Token.LAMBDA_DEFINE;
             }
-            case '*' -> Token.MULTIPLY;
+            case '*', '\u00B7' -> Token.MULTIPLY;
             case '/' -> Token.DIVIDE;
             case '^' -> Token.POWER;
             case '!' -> Token.FACTORIAL;

@@ -2,15 +2,8 @@ package com.github.rccookie.math.expr;
 
 import com.github.rccookie.math.Number;
 
-record OptimizedDerivedBinaryFunction(Function base, Number optimize)
-        implements Expression.Function, Expression.BinaryOperation {
-
-    OptimizedDerivedBinaryFunction {
-        if(!(base instanceof BinaryOperation))
-            throw new IllegalArgumentException("Binary function required");
-        if(!(((BinaryOperation) base).a() instanceof Function))
-            throw new IllegalArgumentException("Function is not a deriving function");
-    }
+record OptimizedDerivedBinaryFunction(Expression.BinaryFunctionOperation base, Number optimize)
+        implements Expression.BinaryFunctionOperation {
 
     @Override
     public String toString() {
@@ -23,13 +16,13 @@ record OptimizedDerivedBinaryFunction(Function base, Number optimize)
     }
 
     @Override
-    public Expression a() {
-        return ((BinaryOperation) base).a();
+    public Function a() {
+        return base.a();
     }
 
     @Override
     public Expression b() {
-        return ((BinaryOperation) base).b();
+        return base.b();
     }
 
     @Override
@@ -63,15 +56,14 @@ record OptimizedDerivedBinaryFunction(Function base, Number optimize)
     }
 
     @Override
-    public Number evaluate(SymbolLookup lookup, Number params) {
-        Number ea = ((Function) a()).evaluate(lookup, params);
+    public Number evaluateHalf(SymbolLookup lookup, Number params, Number ea) {
         if(ea.equals(optimize)) return ea;
-        return base.evaluate(lookup, params);
+        return base.evaluateHalf(lookup, params, ea);
     }
 
     @Override
     public Function simplify() {
-        Function sa = ((Function) a()).simplify();
+        Function sa = a().simplify();
         if(sa.expr().equals(optimize)) return sa;
         return base.simplify();
     }

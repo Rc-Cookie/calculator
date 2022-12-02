@@ -37,6 +37,7 @@ public class Calculator {
             "ans", new Rational(42),
             "true", Number.ONE(),
             "false", Number.ZERO(),
+            "_", Expression.UNSPECIFIED(),
 
             "min", Functions.MIN,
             "max", Functions.MAX,
@@ -104,7 +105,7 @@ public class Calculator {
         if(expression.isEmpty())
             return evaluate(lastExpr);
         char c = expression.charAt(0);
-        if(c == '+' || c == '*' || c == '/' || c == ':' || c == '^' || c == '>' || c == '<' || c == '=' || c == '\u00B2' || c == '\u00B3')
+        if(c == '+' || c == '*' || c == '\u00B7' || c == '/' || c == ':' || c == '^' || c == '>' || c == '<' || c == '=' || c == '\u00B2' || c == '\u00B3')
             expression = "ans " + expression;
         return evaluate(expression);
     }
@@ -206,9 +207,12 @@ public class Calculator {
             Rational.DetailedToString str = mode != null ? r.detailedToString(mode) : r.detailedToString();
             System.out.print(str.precise() ? '=' : ABOUT_EQUAL);
             System.out.print(' ');
-            System.out.print(str.str());
-            if(str.precise() && !str.isFull())
-                System.out.print("...");
+            if(str.precise() && !str.isFull()) {
+                int index = str.str().indexOf("\u00B7");
+                if(index == -1) System.out.print(str.str() + "...");
+                else System.out.print(str.str().substring(0, index) + "..." + str.str().substring(index));
+            }
+            else System.out.print(str.str());
             System.out.println();
         }
         else if(res instanceof SimpleNumber n && !n.precise() || res instanceof Complex c && !c.precise())
@@ -242,15 +246,10 @@ public class Calculator {
                 if(calculator.moreCount < 10)
                     calculator.moreCount++;
                 Number res = calculator.lookup.get("ans");
-                if(res instanceof Expression && !(res instanceof Expression.Numbers))
-                    System.out.println(res);
-                else {
-                    String aboutEqual = (Charset.defaultCharset().newEncoder().canEncode('\u2248') ? '\u2248' : '~') + " ";
-                    int precision = Rational.getPrecision();
-                    Rational.setPrecision(precision << calculator.moreCount);
-                    System.out.println(((res instanceof SimpleNumber n && !n.precise()) || (res instanceof Complex c && !c.precise()) ? aboutEqual : "= ") + res);
-                    Rational.setPrecision(precision);
-                }
+                int precision = Rational.getPrecision();
+                Rational.setPrecision(precision << calculator.moreCount);
+                printRes(res, null);
+                Rational.setPrecision(precision);
             }
             case "frac" -> {
                 Number res = calculator.lookup.get("ans");
@@ -270,7 +269,7 @@ public class Calculator {
             case "help" -> System.out.println("""
                     Enter a math expression to be evaluated. Supported features:
                      - Basic arithmetics (+-*/^!)
-                     - Implicit multiplication (omit multiplication sign, i.e. 2(3+4) = 2*(3+4)
+                     - Implicit multiplication (omit multiplication sign, i.e. 2(3+4) = 2\u00B7(3+4)
                      - Comparisons (< <= = >= >) returning 0 or 1
                      - Vectors: Declare with brackets, split arguments with commas, i.e. [1,2,3]
                      - Function calls as usual, i.e. f(2). List default functions using \\vars
@@ -337,7 +336,7 @@ public class Calculator {
             Number var = variables.get(name);
             if(var == null)
                 throw new IllegalArgumentException("Unknown variable or function: '" + name + "'");
-            return var instanceof Rational r ? new Rational(r.toBigDecimal(), r.precise) : var; // Round high-precision constants
+            return var instanceof Rational r && !r.precise ? new Rational(r.toBigDecimal(), false) : var; // Round high-precision constants
         }
 
         @Override

@@ -80,46 +80,46 @@ public interface Expression extends Number {
     }
 
     @Override
-    default @NotNull Expression add(Number x) {
+    default @NotNull BinaryOperation add(Number x) {
         return new SimpleBinaryOperation("+", "$1 + $2", this, x, Token.PLUS.precedence(), Number::add);
     }
 
     @Override
     @NotNull
-    default Expression subtract(Number x) {
+    default BinaryOperation subtract(Number x) {
         return new SimpleBinaryOperation("-", "$1 - $2", this, x, Token.MINUS.precedence(), Number::subtract);
     }
 
     @Override
     @NotNull
-    default Expression subtractFrom(Number x) {
+    default BinaryOperation subtractFrom(Number x) {
         return new SimpleBinaryOperation("-", "$2 - $1", this, x, Token.MINUS.precedence(), Number::subtractFrom);
     }
 
     @Override
     @NotNull
-    default Expression multiply(Number x) {
+    default BinaryOperation multiply(Number x) {
         return new OptimizedBinaryOperation(
-                new SimpleBinaryOperation("*", "$1 * $2", this, x, Token.MULTIPLY.precedence(), Number::multiply),
+                new SimpleBinaryOperation("*", "$1\u00B7$2", this, x, Token.MULTIPLY.precedence(), Number::multiply),
                 Number.ZERO()
         );
     }
 
     @Override
     @NotNull
-    default Expression divide(Number x) {
+    default BinaryOperation divide(Number x) {
         return new SimpleBinaryOperation("/", "$1 / $2", this, x, Token.DIVIDE.precedence(), Number::divide);
     }
 
     @Override
     @NotNull
-    default Expression divideOther(Number x) {
+    default BinaryOperation divideOther(Number x) {
         return new SimpleBinaryOperation("/", "$2 / $1", this, x, Token.DIVIDE.precedence(), Number::divideOther);
     }
 
     @Override
     @NotNull
-    default Expression raise(Number x) {
+    default BinaryOperation raise(Number x) {
         return new OptimizedBinaryOperation(
                 new SimpleBinaryOperation("^", "$1^$2", this, x, Token.POWER.precedence(), Number::raise),
                 Number.ZERO()
@@ -128,7 +128,7 @@ public interface Expression extends Number {
 
     @Override
     @NotNull
-    default Expression raiseOther(Number x) {
+    default BinaryOperation raiseOther(Number x) {
         return new OptimizedBinaryOperation(
                 new SimpleBinaryOperation("^", "$2^$1", this, x, Token.POWER.precedence(), Number::raiseOther),
                 Number.ZERO()
@@ -137,47 +137,47 @@ public interface Expression extends Number {
 
     @Override
     @NotNull
-    default Expression abs() {
+    default UnaryOperation abs() {
         return new SimpleUnaryOperation("abs", "|$x|", this, Integer.MAX_VALUE, Number::abs);
     }
 
     @Override
     @NotNull
-    default Expression negate() {
+    default UnaryOperation negate() {
         return new SimpleUnaryOperation("negate", "-$x", this, Token.NEGATE.precedence(), Number::negate);
     }
 
     @Override
     @NotNull
-    default Expression invert() {
+    default UnaryOperation invert() {
         return new SimpleUnaryOperation("invert", "1/$x", this, Token.DIVIDE.precedence(), Number::invert);
     }
 
     @Override
     @NotNull
-    default Expression equalTo(Number x) {
+    default BinaryOperation equalTo(Number x) {
         return new SimpleBinaryOperation("=", "$1 = $2", this, x, Token.EQUALS.precedence(), Number::equalTo);
     }
 
     @Override
     @NotNull
-    default Expression lessThan(Number x) {
+    default BinaryOperation lessThan(Number x) {
         return new SimpleBinaryOperation("<", "$1 < $2", this, x, Token.LESS.precedence(), Number::lessThan);
     }
 
     @Override
-    default Expression lessThanOrEqual(Number x) {
+    default BinaryOperation lessThanOrEqual(Number x) {
         return new SimpleBinaryOperation("<=", "$1 <= $2", this, x, Token.LESS_OR_EQUAL.precedence(), Number::lessThanOrEqual);
     }
 
     @Override
     @NotNull
-    default Expression greaterThan(Number x) {
+    default BinaryOperation greaterThan(Number x) {
         return new SimpleBinaryOperation(">", "$1 > $2", this, x, Token.GREATER.precedence(), Number::greaterThan);
     }
 
     @Override
-    default Expression greaterThanOrEqual(Number x) {
+    default BinaryOperation greaterThanOrEqual(Number x) {
         return new SimpleBinaryOperation(">=", "$1 >= $2", this, x, Token.GREATER_OR_EQUAL.precedence(), Number::greaterThanOrEqual);
     }
 
@@ -361,6 +361,13 @@ public interface Expression extends Number {
         default int operandCount() {
             return 2;
         }
+
+        @Override
+        default Number evaluate(SymbolLookup lookup) {
+            return evaluateHalf(lookup, a().evaluate(lookup));
+        }
+
+        Number evaluateHalf(SymbolLookup lookup, Number ea);
     }
 
     /**
@@ -414,96 +421,88 @@ public interface Expression extends Number {
         }
 
         @Override
-        @NotNull
-        default Expression add(Number x) {
+        default @NotNull BinaryOperation add(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default @NotNull BinaryOperation subtract(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default @NotNull BinaryOperation subtractFrom(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default @NotNull BinaryOperation multiply(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default @NotNull BinaryOperation divide(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default @NotNull BinaryOperation divideOther(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default @NotNull BinaryOperation raise(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default @NotNull BinaryOperation raiseOther(Number x) {
             throw new ArithmeticException("List arithmetics");
         }
 
         @Override
         @NotNull
-        default Expression subtract(Number x) {
+        default UnaryOperation abs() {
             throw new ArithmeticException("List arithmetics");
         }
 
         @Override
         @NotNull
-        default Expression subtractFrom(Number x) {
+        default UnaryOperation negate() {
             throw new ArithmeticException("List arithmetics");
         }
 
         @Override
         @NotNull
-        default Expression multiply(Number x) {
+        default UnaryOperation invert() {
             throw new ArithmeticException("List arithmetics");
         }
 
         @Override
         @NotNull
-        default Expression divide(Number x) {
+        default BinaryOperation equalTo(Number x) {
             throw new ArithmeticException("List arithmetics");
         }
 
         @Override
         @NotNull
-        default Expression divideOther(Number x) {
+        default BinaryOperation lessThan(Number x) {
+            throw new ArithmeticException("List arithmetics");
+        }
+
+        @Override
+        default BinaryOperation lessThanOrEqual(Number x) {
             throw new ArithmeticException("List arithmetics");
         }
 
         @Override
         @NotNull
-        default Expression raise(Number x) {
+        default BinaryOperation greaterThan(Number x) {
             throw new ArithmeticException("List arithmetics");
         }
 
         @Override
-        @NotNull
-        default Expression raiseOther(Number x) {
-            throw new ArithmeticException("List arithmetics");
-        }
-
-        @Override
-        @NotNull
-        default Expression abs() {
-            throw new ArithmeticException("List arithmetics");
-        }
-
-        @Override
-        @NotNull
-        default Expression negate() {
-            throw new ArithmeticException("List arithmetics");
-        }
-
-        @Override
-        @NotNull
-        default Expression invert() {
-            throw new ArithmeticException("List arithmetics");
-        }
-
-        @Override
-        @NotNull
-        default Expression equalTo(Number x) {
-            throw new ArithmeticException("List arithmetics");
-        }
-
-        @Override
-        @NotNull
-        default Expression lessThan(Number x) {
-            throw new ArithmeticException("List arithmetics");
-        }
-
-        @Override
-        default Expression lessThanOrEqual(Number x) {
-            throw new ArithmeticException("List arithmetics");
-        }
-
-        @Override
-        @NotNull
-        default Expression greaterThan(Number x) {
-            throw new ArithmeticException("List arithmetics");
-        }
-
-        @Override
-        default Expression greaterThanOrEqual(Number x) {
+        default BinaryOperation greaterThanOrEqual(Number x) {
             throw new ArithmeticException("List arithmetics");
         }
 
@@ -568,9 +567,9 @@ public interface Expression extends Number {
          *                 specified parameter
          * @return A new function representing the function described above
          */
-        default Function derive(String name, String format, Expression b, int precedence, BinaryOperator<Number> operator) {
+        default BinaryFunctionOperation derive(String name, String format, Expression b, int precedence, BinaryOperator<Number> operator) {
             if(b instanceof Function fb)
-                return new FunctionBinaryOperation(name, format, this, fb, precedence, operator);
+                return new BinaryFunctionOperationImpl(name, format, this, fb, precedence, operator);
             return new DerivedBinaryFunction(name, format, this, b, precedence, operator);
         }
 
@@ -585,7 +584,7 @@ public interface Expression extends Number {
          *                 specified parameter
          * @return A new function representing the function described above
          */
-        default Function derive(String name, String format, Number b, int precedence, BinaryOperator<Number> operator) {
+        default BinaryFunctionOperation derive(String name, String format, Number b, int precedence, BinaryOperator<Number> operator) {
             return derive(name, format, Expression.of(b), precedence, operator);
         }
 
@@ -598,7 +597,7 @@ public interface Expression extends Number {
          * @param operator The operator to apply to the result of the function
          * @return A new function representing the function described above
          */
-        default Function derive(String name, String format, int precedence, UnaryOperator<Number> operator) {
+        default UnaryFunctionOperation derive(String name, String format, int precedence, UnaryOperator<Number> operator) {
             return new DerivedUnaryFunction(name, format, this, precedence, operator);
         }
 
@@ -606,46 +605,46 @@ public interface Expression extends Number {
 
         @Override
         @NotNull
-        default Expression add(Number x) {
+        default Expression.BinaryFunctionOperation add(Number x) {
             return derive("+", "$1 + $2", x, Token.PLUS.precedence(), Number::add);
         }
 
         @Override
         @NotNull
-        default Expression subtract(Number x) {
+        default Expression.BinaryFunctionOperation subtract(Number x) {
             return derive("-", "$1 - $2", x, Token.MINUS.precedence(), Number::subtract);
         }
 
         @Override
         @NotNull
-        default Expression subtractFrom(Number x) {
+        default Expression.BinaryFunctionOperation subtractFrom(Number x) {
             return derive("-", "$2 - $1", x, Token.MINUS.precedence(), Number::subtractFrom);
         }
 
         @Override
         @NotNull
-        default Expression multiply(Number x) {
+        default Expression.BinaryFunctionOperation multiply(Number x) {
             return new OptimizedDerivedBinaryFunction(
-                    derive("*", "$1 * $2", x, Token.MULTIPLY.precedence(), Number::multiply),
+                    derive("*", "$1\u00B7$2", x, Token.MULTIPLY.precedence(), Number::multiply),
                     Number.ZERO()
             );
         }
 
         @Override
         @NotNull
-        default Expression divide(Number x) {
+        default Expression.BinaryFunctionOperation divide(Number x) {
             return derive("/", "$1 / $2", x, Token.DIVIDE.precedence(), Number::divide);
         }
 
         @Override
         @NotNull
-        default Expression divideOther(Number x) {
+        default Expression.BinaryFunctionOperation divideOther(Number x) {
             return derive("/", "$2 / $1", x, Token.DIVIDE.precedence(), Number::divideOther);
         }
 
         @Override
         @NotNull
-        default Expression raise(Number x) {
+        default Expression.BinaryFunctionOperation raise(Number x) {
             return new OptimizedDerivedBinaryFunction(
                     derive("^", "$1^$2", x, Token.POWER.precedence(), Number::raise),
                     Number.ZERO()
@@ -654,7 +653,7 @@ public interface Expression extends Number {
 
         @Override
         @NotNull
-        default Expression raiseOther(Number x) {
+        default Expression.BinaryFunctionOperation raiseOther(Number x) {
             return new OptimizedDerivedBinaryFunction(
                     derive("^", "$2^$1", x, Token.POWER.precedence(), Number::raiseOther),
                     Number.ZERO()
@@ -663,48 +662,72 @@ public interface Expression extends Number {
 
         @Override
         @NotNull
-        default Expression abs() {
+        default Expression.UnaryFunctionOperation abs() {
             return derive("abs", "|$x|", Integer.MAX_VALUE, Number::abs);
         }
 
         @Override
         @NotNull
-        default Expression negate() {
+        default Expression.UnaryFunctionOperation negate() {
             return derive("negate", "-$x", Token.NEGATE.precedence(), Number::negate);
         }
 
         @Override
         @NotNull
-        default Expression invert() {
+        default Expression.UnaryFunctionOperation invert() {
             return derive("invert", "1/$x", Token.DIVIDE.precedence(), Number::invert);
         }
 
         @Override
         @NotNull
-        default Expression equalTo(Number x) {
+        default Expression.BinaryFunctionOperation equalTo(Number x) {
             return derive("=", "$1 = $2", x, Token.EQUALS.precedence(), Number::equalTo);
         }
 
         @Override
         @NotNull
-        default Expression lessThan(Number x) {
+        default Expression.BinaryFunctionOperation lessThan(Number x) {
             return derive("<", "$1 < $2", x, Token.LESS.precedence(), Number::lessThan);
         }
 
         @Override
-        default Expression lessThanOrEqual(Number x) {
+        default BinaryFunctionOperation lessThanOrEqual(Number x) {
             return derive("<=", "$1 <= $2", x, Token.LESS_OR_EQUAL.precedence(), Number::lessThanOrEqual);
         }
 
         @Override
         @NotNull
-        default Expression greaterThan(Number x) {
+        default Expression.BinaryFunctionOperation greaterThan(Number x) {
             return derive(">", "$1 > $2", x, Token.GREATER.precedence(), Number::greaterThan);
         }
 
         @Override
-        default Expression greaterThanOrEqual(Number x) {
+        default BinaryFunctionOperation greaterThanOrEqual(Number x) {
             return derive(">=", "$1 >= $2", x, Token.GREATER_OR_EQUAL.precedence(), Number::greaterThanOrEqual);
         }
+    }
+
+    interface UnaryFunctionOperation extends Function, UnaryOperation { }
+
+    interface BinaryFunctionOperation extends Function, BinaryOperation {
+        @Override
+        default Number evaluate(SymbolLookup lookup) {
+            return this;
+        }
+
+        @Override
+        default Number evaluateHalf(SymbolLookup lookup, Number ea) {
+            return this;
+        }
+
+        @Override
+        Function a();
+
+        @Override
+        default Number evaluate(SymbolLookup lookup, Number params) {
+            return evaluateHalf(lookup, params, a().evaluate(lookup, params));
+        }
+
+        Number evaluateHalf(SymbolLookup lookup, Number params, Number ea);
     }
 }

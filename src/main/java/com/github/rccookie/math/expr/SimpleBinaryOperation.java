@@ -12,8 +12,8 @@ record SimpleBinaryOperation(String name, String format, Expression a, Expressio
     }
 
     @Override
-    public Number evaluate(SymbolLookup c) {
-        return function.apply(Expression.evaluate(a,c), Expression.evaluate(b,c));
+    public Number evaluateHalf(SymbolLookup lookup, Number ea) {
+        return function.apply(ea, Expression.evaluate(b,lookup));
     }
 
     @Override

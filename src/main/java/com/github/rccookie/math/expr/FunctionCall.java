@@ -11,8 +11,8 @@ record FunctionCall(Expression function, Expression params)
     }
 
     @Override
-    public Number evaluate(SymbolLookup lookup) {
-        return ((Expression.Function) function.evaluate(lookup)).evaluate(lookup, params.evaluate(lookup));
+    public Number evaluateHalf(SymbolLookup lookup, Number ea) {
+        return ((Expression.Function) ea).evaluate(lookup, params.evaluate(lookup));
     }
 
     @Override

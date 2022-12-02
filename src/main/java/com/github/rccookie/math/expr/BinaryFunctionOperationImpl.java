@@ -6,12 +6,12 @@ import java.util.stream.Stream;
 
 import com.github.rccookie.math.Number;
 
-record FunctionBinaryOperation(String name,
-                               String format,
-                               Expression.Function a,
-                               Expression.Function b,
-                               int opPrecedence,
-                               BinaryOperator<Number> operator) implements Expression.Function, Expression.BinaryOperation {
+record BinaryFunctionOperationImpl(String name,
+                                   String format,
+                                   Expression.Function a,
+                                   Expression.Function b,
+                                   int opPrecedence,
+                                   BinaryOperator<Number> operator) implements Expression.BinaryFunctionOperation {
 
     @Override
     public int paramCount() {
@@ -38,8 +38,8 @@ record FunctionBinaryOperation(String name,
     }
 
     @Override
-    public Number evaluate(SymbolLookup lookup, Number params) {
-        return operator.apply(a.evaluate(lookup, params), b.evaluate(lookup, params));
+    public Number evaluateHalf(SymbolLookup lookup, Number params, Number ea) {
+        return operator.apply(ea, b.evaluate(lookup, params));
     }
 
     @Override
@@ -63,7 +63,7 @@ record FunctionBinaryOperation(String name,
         }
         if(as.expr() instanceof Numeric an)
             return bs.derive(name, formatFlipped(), an.value(), opPrecedence, (b,a) -> operator.apply(a,b));
-        return new FunctionBinaryOperation(name, format, as, bs, opPrecedence, operator);
+        return new BinaryFunctionOperationImpl(name, format, as, bs, opPrecedence, operator);
     }
 
     private String formatFlipped() {

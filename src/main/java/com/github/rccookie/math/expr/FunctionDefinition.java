@@ -1,5 +1,7 @@
 package com.github.rccookie.math.expr;
 
+import com.github.rccookie.math.Number;
+
 record FunctionDefinition(String name, Expression signature, Function function)
         implements Expression.BinaryOperation {
 
@@ -8,7 +10,12 @@ record FunctionDefinition(String name, Expression signature, Function function)
     }
 
     @Override
-    public Function evaluate(SymbolLookup lookup) {
+    public Number evaluate(SymbolLookup lookup) {
+        return evaluateHalf(lookup, null);
+    }
+
+    @Override
+    public Function evaluateHalf(SymbolLookup lookup, Number ignored) {
         lookup.put(name(), function);
         return function;
     }

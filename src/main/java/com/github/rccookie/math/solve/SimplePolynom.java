@@ -12,8 +12,6 @@ import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.SymbolLookup;
 import com.github.rccookie.util.Arguments;
 
-import org.jetbrains.annotations.NotNull;
-
 record SimplePolynom(String indeterminant, Expression... coefficients) implements Polynom {
 
     SimplePolynom(String indeterminant, Expression... coefficients) {
@@ -130,53 +128,53 @@ record SimplePolynom(String indeterminant, Expression... coefficients) implement
     }
 
 
-    @Override
-    public @NotNull Expression add(Number x) {
-        if(x instanceof Polynom p && p.indeterminantCount() == 1)
-            return deriveLinear(p, Expression::add);
-        if(x instanceof Expression e && Polynom.containsIndeterminant(e, indeterminant))
-            return Polynom.super.add(x);
-        Expression[] c = coefficients.clone();
-        c[0] = c[0].add(x);
-        return new SimplePolynom(c);
-    }
-
-    @Override
-    public @NotNull Expression subtract(Number x) {
-        if(x instanceof Polynom p && p.indeterminantCount() == 1)
-            return deriveLinear(p, Expression::subtract);
-        if(x instanceof Expression e && Polynom.containsIndeterminant(e, indeterminant))
-            return Polynom.super.subtract(x);
-        Expression[] c = coefficients.clone();
-        c[0] = c[0].subtract(x);
-        return new SimplePolynom(c);
-    }
-
-    @Override
-    public @NotNull Expression subtractFrom(Number x) {
-        if(x instanceof Polynom p && p.indeterminantCount() == 1)
-            return deriveLinear(p, Expression::subtractFrom);
-        if(x instanceof Expression e && Polynom.containsIndeterminant(e, indeterminant))
-            return Polynom.super.subtractFrom(x);
-        Expression[] c = coefficients.clone();
-        c[0] = c[0].subtractFrom(x);
-        return new SimplePolynom(c);
-    }
-
-    @Override
-    public @NotNull Expression multiply(Number x) {
-        return Polynom.super.multiply(x);
-    }
-
-    @Override
-    public @NotNull Expression divide(Number x) {
-        return Polynom.super.divide(x);
-    }
-
-    @Override
-    public @NotNull Expression divideOther(Number x) {
-        return Polynom.super.divideOther(x);
-    }
+//    @Override
+//    public @NotNull BinaryFunctionOperation add(Number x) {
+//        if(x instanceof Polynom p && p.indeterminantCount() == 1)
+//            return deriveLinear(p, Expression::add);
+//        if(x instanceof Expression e && Polynom.containsIndeterminant(e, indeterminant))
+//            return Polynom.super.add(x);
+//        Expression[] c = coefficients.clone();
+//        c[0] = c[0].add(x);
+//        return new SimplePolynom(c);
+//    }
+//
+//    @Override
+//    public @NotNull Expression subtract(Number x) {
+//        if(x instanceof Polynom p && p.indeterminantCount() == 1)
+//            return deriveLinear(p, Expression::subtract);
+//        if(x instanceof Expression e && Polynom.containsIndeterminant(e, indeterminant))
+//            return Polynom.super.subtract(x);
+//        Expression[] c = coefficients.clone();
+//        c[0] = c[0].subtract(x);
+//        return new SimplePolynom(c);
+//    }
+//
+//    @Override
+//    public @NotNull Expression subtractFrom(Number x) {
+//        if(x instanceof Polynom p && p.indeterminantCount() == 1)
+//            return deriveLinear(p, Expression::subtractFrom);
+//        if(x instanceof Expression e && Polynom.containsIndeterminant(e, indeterminant))
+//            return Polynom.super.subtractFrom(x);
+//        Expression[] c = coefficients.clone();
+//        c[0] = c[0].subtractFrom(x);
+//        return new SimplePolynom(c);
+//    }
+//
+//    @Override
+//    public @NotNull Expression multiply(Number x) {
+//        return Polynom.super.multiply(x);
+//    }
+//
+//    @Override
+//    public @NotNull Expression divide(Number x) {
+//        return Polynom.super.divide(x);
+//    }
+//
+//    @Override
+//    public @NotNull Expression divideOther(Number x) {
+//        return Polynom.super.divideOther(x);
+//    }
 
 
 

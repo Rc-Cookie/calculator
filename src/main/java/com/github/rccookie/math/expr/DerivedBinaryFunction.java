@@ -10,7 +10,7 @@ record DerivedBinaryFunction(
         Expression.Function function,
         Expression b,
         int opPrecedence,
-        BinaryOperator<Number> operator) implements Expression.Function, Expression.BinaryOperation {
+        BinaryOperator<Number> operator) implements Expression.BinaryFunctionOperation {
 
 
     @Override
@@ -19,7 +19,7 @@ record DerivedBinaryFunction(
     }
 
     @Override
-    public Expression a() {
+    public Function a() {
         return function;
     }
 
@@ -49,8 +49,8 @@ record DerivedBinaryFunction(
     }
 
     @Override
-    public Number evaluate(SymbolLookup lookup, Number params) {
-        return Expression.evaluate(operator.apply(function.evaluate(lookup, params), b), lookup);
+    public Number evaluateHalf(SymbolLookup lookup, Number params, Number ea) {
+        return Expression.evaluate(operator.apply(ea, b), lookup);
     }
 
     @Override

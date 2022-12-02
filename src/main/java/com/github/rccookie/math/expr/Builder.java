@@ -84,7 +84,7 @@ final class Builder implements Expression {
     }
 
 
-    static record VectorExpression(Expression[] elements) implements Expression {
+    record VectorExpression(Expression[] elements) implements Expression {
         @Override
         public Number evaluate(SymbolLookup lookup) {
             Number[] evaluated = new Number[elements.length];

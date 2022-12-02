@@ -9,7 +9,7 @@ record DerivedUnaryFunction(
         String format,
         Expression.Function function,
         int opPrecedence,
-        UnaryOperator<Number> operator) implements Expression.Function, Expression.UnaryOperation {
+        UnaryOperator<Number> operator) implements Expression.UnaryFunctionOperation {
 
     @Override
     public int operandCount() {

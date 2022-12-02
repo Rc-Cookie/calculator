@@ -377,7 +377,7 @@ public class Rational implements SimpleNumber {
                     n = n.multiply(BigInteger.TEN);
                 } while(n.compareTo(d) < 0);
                 DetailedToString str = mode.toString(new Rational(n, d, x.precise));
-                return new DetailedToString(str.str + "E" + e, str.precise, str.isFull);
+                return new DetailedToString(str.str + "\u00B710^(" + e + ")", str.precise, str.isFull);
             }
             else {
                 while(n.compareTo(d) > 0) { // 1000/3 -> 1000/300 -> 10/3E2
@@ -387,8 +387,7 @@ public class Rational implements SimpleNumber {
                 e--;
                 n = n.multiply(BigInteger.TEN);
                 DetailedToString str = mode.toString(new Rational(n, d, x.precise));
-                if(e == 0) return str;
-                return new DetailedToString(str.str + "E" + e, str.precise, str.isFull);
+                return new DetailedToString(str.str + "\u00B710^" + e, str.precise, str.isFull);
             }
         }
 
