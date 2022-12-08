@@ -14,7 +14,7 @@ record SimpleUnaryOperation(String name, String format, Expression x, int preced
     @Override
     public Expression simplify() {
         Expression simplified = x.simplify();
-        if(simplified instanceof Numeric n)
+        if(simplified instanceof Constant n)
             return Expression.of(function.apply(n.value()));
         return new SimpleUnaryOperation(name, format, simplified, precedence, function);
     }

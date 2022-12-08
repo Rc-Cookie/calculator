@@ -7,7 +7,7 @@ final class Parser {
     public Expression parse(Iterable<Token> postfix) {
         Stack<Expression> stack = new MathStack();
         for(Token t : postfix) stack.push(switch(t) {
-            case Token.NumberToken n -> new NumericExpression(n.value());
+            case Token.NumberToken n -> new ConstantExpression(n.value());
             case Token.Symbol v -> v;
             case Token.Operator o -> o.apply(stack);
         });

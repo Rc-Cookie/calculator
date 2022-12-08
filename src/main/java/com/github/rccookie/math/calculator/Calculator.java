@@ -2,6 +2,7 @@ package com.github.rccookie.math.calculator;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
@@ -81,7 +82,8 @@ public class Calculator {
             "scientific", switch(Rational.getToStringMode()) {
                 case SMART, DECIMAL_IF_POSSIBLE, FORCE_FRACTION, FORCE_DECIMAL -> Number.ZERO();
                 default -> Number.ONE();
-            }
+            },
+            "k", new Rational(1000)
     );
 
     private static final char ABOUT_EQUAL = Charset.defaultCharset().newEncoder().canEncode('\u2248') ? '\u2248' : '~';
@@ -259,6 +261,21 @@ public class Calculator {
                 Number res = calculator.lookup.get("ans");
                 printRes(res, Rational.ToStringMode.FORCE_DECIMAL);
             }
+            case "bin" -> {
+                Number res = calculator.lookup.get("ans");
+                System.out.println(getInt(res).toString(2));
+            }
+            case "hex" -> {
+                Number res = calculator.lookup.get("ans");
+                System.out.println(getInt(res).toString(16));
+            }
+            case "radix" -> {
+                if(cmds.length != 2)
+                    throw new IllegalArgumentException("Usage: \\radix <radix>");
+                Number res = calculator.lookup.get("ans");
+                int radix = Integer.parseInt(cmds[1]);
+                System.out.println(getInt(res).toString(radix));
+            }
             case "load" -> {
                 if(cmds.length != 2)
                     System.err.println("Usage: \\load <packageName>, i.e. \\load physics");
@@ -314,6 +331,14 @@ public class Calculator {
             if(Console.getFilter().isEnabled("debug"))
                 e.printStackTrace();
         }
+    }
+
+    private static BigInteger getInt(Number n) {
+        if(n instanceof Rational r && r.d.equals(BigInteger.ONE))
+            return r.n;
+        if(n instanceof Complex c && c.isReal() && c.re instanceof Rational r && r.d.equals(BigInteger.ONE))
+            return r.n;
+        throw new IllegalArgumentException("Not an integer");
     }
 
 

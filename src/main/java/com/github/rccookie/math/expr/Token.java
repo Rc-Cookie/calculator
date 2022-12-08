@@ -21,7 +21,7 @@ sealed interface Token {
     Operator DIVIDE    = new Operator("/", Precedence.DIVIDE, Expression::divide);
     Operator NEGATE    = new Operator("~", Precedence.NEGATE, Expression::negate);
     Operator POWER     = new Operator("^", Precedence.POWER, Expression::raise);
-    Operator FACTORIAL = new Operator("!", Precedence.FACTORIAL, x -> new SimpleUnaryOperation("!", "($x)!", x, 40, Functions::factorial));
+    Operator FACTORIAL = new Operator("!", Precedence.FACTORIAL, x -> new SimpleUnaryOperation("!", "$x!", x, 40, Functions::factorial));
     Operator ABS       = new Operator("abs", -10, true, s -> new Abs(s.pop()));
 
     Operator DEGREE  = new Operator("\u00B0", Precedence.DEGREE, x -> x.multiply(Number.DEG_TO_RAD()));

@@ -56,12 +56,12 @@ record BinaryFunctionOperationImpl(String name,
     @Override
     public Function simplify() {
         Function as = a.simplify(), bs = b.simplify();
-        if(bs.expr() instanceof Numeric bn) {
-            if(as.expr() instanceof Numeric an)
+        if(bs.expr() instanceof Constant bn) {
+            if(as.expr() instanceof Constant an)
                 return new RuntimeFunction(Expression.of(operator.apply(an.value(), bn.value())), paramNames());
             return as.derive(name, format, as, opPrecedence, operator);
         }
-        if(as.expr() instanceof Numeric an)
+        if(as.expr() instanceof Constant an)
             return bs.derive(name, formatFlipped(), an.value(), opPrecedence, (b,a) -> operator.apply(a,b));
         return new BinaryFunctionOperationImpl(name, format, as, bs, opPrecedence, operator);
     }

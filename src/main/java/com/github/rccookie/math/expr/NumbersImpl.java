@@ -50,7 +50,7 @@ record NumbersImpl(Expression... elements) implements Expression.Numbers {
     @Override
     public Numbers evaluate(SymbolLookup lookup) {
         for(int i=0; i<elements.length; i++)
-            if(!(elements[i] instanceof Expression.Numeric))
+            if(!(elements[i] instanceof Constant))
                 return new NumbersImpl(evaluateToArray(lookup));
         return this;
     }

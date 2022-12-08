@@ -22,7 +22,7 @@ record Abs(Expression x) implements Expression.UnaryOperation {
     @Override
     public Expression simplify() {
         Expression xs = x.simplify();
-        return xs instanceof Numeric n ? Expression.of(n.value().abs()) : new Abs(xs);
+        return xs instanceof Constant n ? Expression.of(n.value().abs()) : new Abs(xs);
     }
 
     @Override

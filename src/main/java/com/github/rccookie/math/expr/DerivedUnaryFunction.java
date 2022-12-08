@@ -54,7 +54,7 @@ record DerivedUnaryFunction(
     @Override
     public Function simplify() {
         Function simplified = function.simplify();
-        if(simplified instanceof Numeric n)
+        if(simplified instanceof Constant n)
             return new RuntimeFunction(Expression.of(operator.apply(n.value())), paramNames());
         return new DerivedUnaryFunction(name, format, simplified, opPrecedence, operator);
     }

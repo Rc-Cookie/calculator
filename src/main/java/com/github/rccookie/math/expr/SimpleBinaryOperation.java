@@ -19,7 +19,7 @@ record SimpleBinaryOperation(String name, String format, Expression a, Expressio
     @Override
     public Expression simplify() {
         Expression as = a.simplify(), bs = b.simplify();
-        if(as instanceof Numeric an && bs instanceof Numeric bn)
+        if(as instanceof Constant an && bs instanceof Constant bn)
             return Expression.of(function.apply(an.value(), bn.value()));
         return new SimpleBinaryOperation(name, format, as, bs, precedence, function);
     }

@@ -9,7 +9,9 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.Rational;
 import com.github.rccookie.util.Console;
 
 import org.jetbrains.annotations.Contract;
@@ -195,7 +197,7 @@ public interface Expression extends Number {
      * @return The number wrapped as expression, or the passed expression itself
      */
     static Expression of(Number x) {
-        return x instanceof Expression e ? e : new NumericExpression(x);
+        return x instanceof Expression e ? e : new ConstantExpression(x);
     }
 
     /**
@@ -249,7 +251,7 @@ public interface Expression extends Number {
      * A numeric expression. Has a constant value that is independent of the
      * evaluation context.
      */
-    interface Numeric extends Expression {
+    interface Constant extends Expression {
         Number value();
 
         @Override
@@ -278,8 +280,26 @@ public interface Expression extends Number {
         }
 
         @Override
+        default String name() {
+            return "Constant";
+        }
+
+        @Override
         default int precedence() {
-            return Integer.MAX_VALUE;
+            if(value() instanceof Rational r) {
+                String str = r.toString();
+                if(str.contains("-")) return Precedence.NEGATE;
+                if(!str.contains("^")) return Precedence.MAX;
+                if(!str.contains("\u00B7")) return Precedence.POWER;
+                return Precedence.MULTIPLY;
+            }
+            if(value() instanceof Complex c) {
+                String str = c.toString();
+                if(str.contains("+") || str.contains("-")) return Precedence.PLUS;
+                if((str.contains("i") && !str.equals("i")) || str.contains("\u00B7")) return Precedence.MULTIPLY;
+                if(str.contains("^")) return Precedence.POWER;
+            }
+            return Precedence.MAX;
         }
     }
 

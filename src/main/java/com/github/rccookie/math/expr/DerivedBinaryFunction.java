@@ -57,8 +57,8 @@ record DerivedBinaryFunction(
     public Function simplify() {
         Function fs = function.simplify();
         Expression bs = b.simplify();
-        if(fs.expr() instanceof Numeric fn) {
-            if(bs instanceof Numeric bn)
+        if(fs.expr() instanceof Constant fn) {
+            if(bs instanceof Constant bn)
                 return new RuntimeFunction(Expression.of(operator.apply(fn.value(), bn.value())), paramNames());
             return new RuntimeFunction(new SimpleBinaryOperation(name, format, fn, bs, opPrecedence, operator), paramNames());
         }

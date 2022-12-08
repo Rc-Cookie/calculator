@@ -69,7 +69,7 @@ record SimplePolynom(String indeterminant, Expression... coefficients) implement
         if(c.equals(Number.ZERO())) return null;
         String str = "";
         if(coeff == 0 || !c.equals(Number.ONE())) {
-            if(c instanceof Numeric)
+            if(c instanceof Constant)
                 str = c.toString();
             else str = "(" + c + ")";
         }

@@ -115,6 +115,7 @@ public class Rational implements SimpleNumber {
         this.precise = precise;
     }
 
+    @Override
     public BigDecimal toBigDecimal() {
         MathContext context = new MathContext(n.abs().divide(d).toString().length() + precision + 3, RoundingMode.HALF_UP);
         return new BigDecimal(n, context).divide(new BigDecimal(d, context), context).setScale(context.getPrecision(), context.getRoundingMode());
@@ -257,7 +258,8 @@ public class Rational implements SimpleNumber {
     @Override
     public SimpleNumber equalTo(SimpleNumber x) {
         if(!(x instanceof Rational r)) return x.equalTo(this);
-        return n.equals(r.n) && d.equals(r.d) ? ONE(precise && r.precise) : ZERO(precise && r.precise);
+        return toString().equals(r.toString()) ? ONE(precise && r.precise) : ZERO(precise && r.precise);
+//        return n.equals(r.n) && d.equals(r.d) ? ONE(precise && r.precise) : ZERO(precise && r.precise);
     }
 
     @Override

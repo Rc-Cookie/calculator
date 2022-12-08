@@ -22,7 +22,7 @@ record ImplicitOperationImpl(Expression a, Expression b)
 
     @Override
     public String toString() {
-        if(a instanceof Numeric || a instanceof Builder.VectorExpression) {
+        if(a instanceof Constant || a instanceof Builder.VectorExpression) {
             String as = a.toString(precedence(), true), bs = b.toString(precedence(), false);
             if(endIsClear(as) || startIsClear(bs))
                 return as + bs;
@@ -52,7 +52,7 @@ record ImplicitOperationImpl(Expression a, Expression b)
         Expression sa = a.simplify(), sb = b.simplify();
         if(sa instanceof Function fa)
             return new FunctionCall(fa, sb);
-        if(!(sa instanceof Numeric na && sb instanceof Numeric nb))
+        if(!(sa instanceof Constant na && sb instanceof Constant nb))
             return new ImplicitOperationImpl(sa, sb);
         return Expression.of(na.value().multiply(nb.value()));
     }

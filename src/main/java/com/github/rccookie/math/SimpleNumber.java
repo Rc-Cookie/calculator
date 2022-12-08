@@ -1,11 +1,15 @@
 package com.github.rccookie.math;
 
+import java.math.BigDecimal;
+
 import org.jetbrains.annotations.NotNull;
 
 public interface SimpleNumber extends Number {
 
 
     boolean precise();
+
+    BigDecimal toBigDecimal();
 
     @Override
     default @NotNull Number add(Number x) {
