@@ -141,8 +141,17 @@ public class Calculator {
         parser.setName("""
                         Java math interpreter - version 2.5
                         By RcCookie""");
-        parser.setDescription("Evaluate entered math expressions. Evaluate '\\help' to show expressions help");
-        parser.parse(args);
+        parser.setDescription("""
+                        
+                        Usage: math [--options] [expression]
+                        Evaluate entered math expressions. Evaluate '\\help' to show expressions help.""");
+
+        String argsStr = parser.parse(args).getArgsString();
+        if(!argsStr.isBlank()) {
+            Calculator calculator = new Calculator();
+            evalInput(calculator, argsStr);
+            evalCommand(calculator, "exit");
+        }
 
         System.out.println("""
                         Java math interpreter - version 2.5
