@@ -6,6 +6,7 @@ import java.util.function.BiConsumer;
 
 import com.github.rccookie.json.JsonElement;
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.util.Utils;
 
 record FormulaPackageImpl(Map<String, Number> formulas) implements FormulaPackage {
@@ -36,7 +37,10 @@ record FormulaPackageImpl(Map<String, Number> formulas) implements FormulaPackag
 
     static FormulaPackage load(JsonElement json) {
         Map<String, Number> formulas = new HashMap<>();
-        json.forEach((n,v) -> formulas.put(n, v.as(Number.class)));
+        json.forEach((n,v) -> {
+            Number val = v.as(Number.class);
+            formulas.put(n, val instanceof Expression e ? Expression.Function.of(e) : val);
+        });
         return new FormulaPackageImpl(formulas);
     }
 }

@@ -50,11 +50,14 @@ public class Calculator implements JsonSerializable {
     public static final String VERSION = "2.7";
 
     private static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
+    private static final Path RECENT_STATE_DIR = Path.of(STATE_STORE_DIR, "_recent");
 
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
             "precision", 50,
             "scientific", false
     );
+
+    private static final long PID = ProcessHandle.current().pid();
 
 
     private static final Map<String, Number> DEFAULT_VARS = Utils.map(
@@ -240,16 +243,7 @@ public class Calculator implements JsonSerializable {
             calculator.evalCommand("exit");
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                Files.createDirectories(Path.of(STATE_STORE_DIR));
-                Json.store(calculator, new File(STATE_STORE_DIR, "_recent.json"));
-            } catch (IOException e) {
-                System.err.println("Failed to store calculator state for restoring");
-                if(Console.getFilter().isEnabled("debug"))
-                    Console.error(e);
-            }
-        }, "Calculate state store thread"));
+
 
         System.out.println("Java math interpreter - version " + VERSION + """
                             
@@ -271,6 +265,7 @@ public class Calculator implements JsonSerializable {
         while(true) {
             System.out.print("> ");
             calculator.evalInput(Console.in.readLine());
+            calculator.storeRestoreState();
 
             config.set("precision", Rational.getPrecision());
             config.set("scientific", switch(Rational.getToStringMode()) {
@@ -337,6 +332,19 @@ public class Calculator implements JsonSerializable {
             System.out.print(ABOUT_EQUAL + " " + res);
         else System.out.print("= " + res);
         System.out.println();
+    }
+
+    private void storeRestoreState() {
+        synchronized(Calculator.class) {
+            try {
+                Files.createDirectories(Path.of(STATE_STORE_DIR, "_recent"));
+                Json.store(this, new File(STATE_STORE_DIR+"/_recent/"+PID+".json"));
+            } catch (Exception e) {
+                System.err.println("Failed to store calculator state for restoring");
+                if(Console.getFilter().isEnabled("debug"))
+                    Console.error(e);
+            }
+        }
     }
 
     private void evalCommand(String cmd) {
@@ -422,8 +430,35 @@ public class Calculator implements JsonSerializable {
                 System.out.println("Calculator state stored.");
             }
             case "restore" -> {
-                if(cmds.length == 1) try {
-                    loadState(Json.load(new File(STATE_STORE_DIR, "_recent.json")).as(Calculator.class));
+                if(cmds.length == 1) try { // Restore from latest restore save
+
+                    // Find the latest restore state whose calculator is not running anymore
+                    Path latest = null;
+                    Files.createDirectories(RECENT_STATE_DIR);
+                    try(var s = Files.newDirectoryStream(Path.of(STATE_STORE_DIR, "_recent"), "*.json")) {
+                        for (Path p : s) {
+                            String f = p.getFileName().toString();
+                            if(f.equals(PID + ".json")) continue; // Don't restore your own state
+                            // Is the process with that id still running and is probably
+                            // a calculator instance?
+                            long pid = Long.parseLong(f.substring(0, f.length() - 5));
+                            if(ProcessHandle.of(pid)
+                                    .map(ph -> ph.info().command().orElse("math"))
+                                    .map(n -> n.contains("math") || n.contains("java"))
+                                    .orElse(false)) continue;
+
+                            if(latest == null) latest = p;
+                            // Delete all non-latest restore files, will never be chosen again
+                            else if(Files.getLastModifiedTime(latest).compareTo(Files.getLastModifiedTime(p)) < 0) {
+                                Files.delete(latest);
+                                latest = p;
+                            } else Files.delete(p);
+                        }
+                    }
+
+                    if(latest == null) throw new IllegalCommandException("No recent state to restore");
+                    loadState(Json.load(latest.toFile()).as(Calculator.class));
+                    System.out.println("Last calculator state restored.");
                     return;
                 } catch(Exception e) {
                     throw new IllegalCommandException("No recent state to restore", e);
