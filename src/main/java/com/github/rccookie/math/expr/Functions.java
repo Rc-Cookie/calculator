@@ -113,7 +113,7 @@ public final class Functions {
             case Complex c -> new Complex((SimpleNumber) floor(c.re), (SimpleNumber) floor(c.im));
             case Vector v -> v.derive(Functions::floor);
             case Expression.Function f -> f.derive("floor", "floor($x)", PRE, Functions::floor);
-            default -> throw new UnsupportedOperationException(""+x);
+            default -> throw new UnsupportedMathOperationException("floor", x);
         };
     }
 
@@ -124,7 +124,7 @@ public final class Functions {
             case Complex c -> new Complex((SimpleNumber) ceil(c.re), (SimpleNumber) ceil(c.im));
             case Vector v -> v.derive(Functions::ceil);
             case Expression.Function f -> f.derive("ceil", "ceil($x)", PRE, Functions::ceil);
-            default -> throw new UnsupportedOperationException(""+x);
+            default -> throw new UnsupportedMathOperationException("ceil", x);
         };
     }
 
@@ -134,7 +134,7 @@ public final class Functions {
             case Complex c -> new Complex((SimpleNumber) round(c.re), (SimpleNumber) round(c.im));
             case Vector v -> v.derive(Functions::round);
             case Expression.Function f -> f.derive("round", "round($x)", PRE, Functions::round);
-            default -> throw new UnsupportedOperationException(""+x);
+            default -> throw new UnsupportedMathOperationException("round", x);
         };
     }
 
@@ -146,7 +146,7 @@ public final class Functions {
             case Complex c -> sin(c);
             case Vector v -> v.derive(Functions::sin);
             case Expression.Function f -> f.derive("sin", "sin($x)", PRE, Functions::sin);
-            default -> throw new UnsupportedOperationException(""+x);
+            default -> throw new UnsupportedMathOperationException("sin", x);
         };
     }
 
@@ -168,7 +168,7 @@ public final class Functions {
             case Complex c -> cos(c);
             case Vector v -> v.derive(Functions::cos);
             case Expression.Function f -> f.derive("cos", "cos($x)", PRE, Functions::cos);
-            default -> throw new UnsupportedOperationException(""+x);
+            default -> throw new UnsupportedMathOperationException("cos", x);
         };
     }
 
@@ -196,7 +196,7 @@ public final class Functions {
             case Complex c -> asin(c);
             case Vector v -> v.derive(Functions::asin);
             case Expression.Function f -> f.derive("asin", "asin($x)", PRE, Functions::asin);
-            default -> throw new UnsupportedOperationException(""+x);
+            default -> throw new UnsupportedMathOperationException("asin", x);
         };
     }
 
@@ -225,7 +225,7 @@ public final class Functions {
             case Complex c -> acos(c);
             case Vector v -> v.derive(Functions::acos);
             case Expression.Function f -> f.derive("acos", "acos($x)", PRE, Functions::acos);
-            default -> throw new UnsupportedOperationException(""+x);
+            default -> throw new UnsupportedMathOperationException("acos", x);
         };
     }
 
@@ -255,7 +255,7 @@ public final class Functions {
             case Complex c -> atan(c);
             case Vector v -> v.derive(Functions::atan);
             case Expression.Function f -> f.derive("atan", "atan($x)", PRE, Functions::atan);
-            default -> throw new UnsupportedOperationException(""+x);
+            default -> throw new UnsupportedMathOperationException("atan", x);
         };
     }
 
@@ -282,7 +282,7 @@ public final class Functions {
         if(x instanceof Vector vx)
             return vx.derive(xc -> atan2(y, xc));
         if(!(x instanceof SimpleNumber && y instanceof SimpleNumber))
-            throw new UnsupportedOperationException();
+            throw new UnsupportedMathOperationException("atan", y, x);
 
         if(x.equals(ZERO())) {
             if(y.greaterThan(ZERO()).equals(ONE()))
@@ -307,7 +307,7 @@ public final class Functions {
             case Complex c -> exp(c);
             case Vector v -> v.derive(Functions::exp);
             case Expression.Function f -> f.derive("exp", "exp($x)", PRE, Functions::exp);
-            default -> throw new UnsupportedOperationException();
+            default -> throw new UnsupportedMathOperationException("exp", x);
         };
     }
 
@@ -330,7 +330,7 @@ public final class Functions {
             case Complex c -> ln(c);
             case Vector v -> v.derive(Functions::ln);
             case Expression.Function f -> f.derive("ln", "ln($x)", PRE, Functions::ln);
-            default -> throw new UnsupportedOperationException();
+            default -> throw new UnsupportedMathOperationException("ln", x);
         };
     }
 
@@ -376,7 +376,7 @@ public final class Functions {
             case Complex c -> c.theta();
             case Vector v -> v.derive(Functions::argument);
             case Expression.Function f -> f.derive("argument", "arg($1,$2)", PRE, Functions::argument);
-            default -> throw new UnsupportedOperationException();
+            default -> throw new UnsupportedMathOperationException("argument", x);
         };
     }
 
@@ -386,7 +386,7 @@ public final class Functions {
             case Complex c -> c.re;
             case Vector v -> v.derive(Functions::re);
             case Expression.Function f -> f.derive("re", "re($1,$2)", PRE, Functions::re);
-            default -> throw new UnsupportedOperationException();
+            default -> throw new UnsupportedMathOperationException("re", x);
         };
     }
 
@@ -396,7 +396,7 @@ public final class Functions {
             case Complex c -> c.im;
             case Vector v -> v.derive(Functions::im);
             case Expression.Function f -> f.derive("im", "im($1,$2)", PRE, Functions::im);
-            default -> throw new UnsupportedOperationException();
+            default -> throw new UnsupportedMathOperationException("im", x);
         };
     }
 
@@ -407,7 +407,7 @@ public final class Functions {
         if(b instanceof Expression.Function f)
             return f.derive("cross", "cross($2,$1)", a, PRE, Functions::cross);
         if(!(a instanceof Vector av) || !(b instanceof Vector bv))
-            throw new IllegalArgumentException("Cross product requires two vectors");
+            throw new MathEvaluationException("Cross product requires two vectors");
         return cross(av, bv);
     }
 
@@ -436,7 +436,7 @@ public final class Functions {
             case Complex c -> c.normalize();
             case Expression.Function f -> f.derive("norm", "norm($x)", PRE, Functions::normalize);
             case SimpleNumber n -> n.greaterThan(ZERO()).subtract(n.lessThan(ZERO()));
-            default -> throw new UnsupportedOperationException(""+x);
+            default -> throw new UnsupportedMathOperationException(""+x);
         };
     }
 
@@ -476,29 +476,14 @@ public final class Functions {
             return v.derive(Functions::factorial);
         double xd = x.toDouble();
         if(xd != (long) xd)
-            throw new IllegalArgumentException("Factorial on non-integer");
+            throw new ArithmeticException("Factorial on non-integer");
         if(xd < 0)
-            throw new IllegalArgumentException("Factorial on negative number");
+            throw new ArithmeticException("Factorial on negative number");
         Number res = ONE();
         for(; x.toDouble() > 0; x = x.subtract(ONE()))
             res = res.multiply(x);
         return res;
     }
-
-//    public static Number factorial(Number x) {
-//        if(x instanceof Vector v)
-//            return v.apply(n -> factorial(n));
-//        if(x instanceof Expression
-//        double xd = x.toDouble(c);
-//        if(xd != (long) xd)
-//            throw new IllegalArgumentException("Factorial on non-integer");
-//        if(xd < 0)
-//            throw new IllegalArgumentException("Factorial on negative number");
-//        Number res = Number.ONE();
-//        for(; x.toDouble(c) > 0; x = x.subtract(Number.ONE()))
-//            res = res.multiply(x);
-//        return res;
-//    }
 
 
 

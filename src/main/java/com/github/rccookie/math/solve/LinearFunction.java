@@ -5,6 +5,8 @@ import java.util.Arrays;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Vector;
 import com.github.rccookie.math.expr.Expression;
+import com.github.rccookie.math.expr.MathExpressionSyntaxException;
+import com.github.rccookie.math.expr.MathEvaluationException;
 import com.github.rccookie.math.expr.SymbolLookup;
 
 public interface LinearFunction extends Expression.Function {
@@ -68,7 +70,7 @@ public interface LinearFunction extends Expression.Function {
         int indCount = coeffs.length;
         if(indCount == 0) {
             if(!(params instanceof Numbers n) || n.size() != 0)
-                throw new IllegalArgumentException("No parameters expected for function call");
+                throw new MathEvaluationException("No parameters expected for function call");
             return offset().evaluate(lookup);
         }
         if(indCount == 1) {
@@ -95,7 +97,7 @@ public interface LinearFunction extends Expression.Function {
     static LinearFunction parse(Number x) {
         if(x instanceof LinearFunction l) return l;
         if(!(x instanceof Function f))
-            throw new IllegalArgumentException("Illegal linear expression: function expected");
+            throw new MathExpressionSyntaxException("Illegal linear expression: function expected");
 
         String[] indeterminants = f.paramNames();
         if(indeterminants.length == 0) // Constant expression

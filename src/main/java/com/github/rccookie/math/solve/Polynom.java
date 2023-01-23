@@ -9,7 +9,9 @@ import java.util.Map;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.SimpleNumber;
 import com.github.rccookie.math.expr.Expression;
+import com.github.rccookie.math.expr.MathExpressionSyntaxException;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.math.expr.UnsupportedMathOperationException;
 
 public interface Polynom extends Expression.Function {
 
@@ -144,13 +146,13 @@ public interface Polynom extends Expression.Function {
     static Polynom parse(SymbolLookup lookup, Number x) {
         if(x instanceof Polynom p) return p;
         if(!(x instanceof Function f))
-            throw new IllegalArgumentException("Illegal polynom expression: function expected");
+            throw new MathExpressionSyntaxException("Illegal polynom expression: function expected");
 
         String[] indeterminants = f.paramNames();
         if(indeterminants.length == 0) // Constant expression
             return new SimplePolynom(f.expr());
         if(indeterminants.length != 1)
-            throw new UnsupportedOperationException("Multi-indeterminant polynoms not supported");
+            throw new UnsupportedMathOperationException("Multi-indeterminant polynoms not supported");
 
         Map<Integer, Expression> coefficients = new HashMap<>();
         parseSumComponent(f.expr(), lookup, indeterminants[0], coefficients);
@@ -192,11 +194,11 @@ public interface Polynom extends Expression.Function {
             Number exp = ((BinaryOperation) product).b().evaluate(lookup);
             double dExp;
             if(!(exp instanceof SimpleNumber) || (dExp = exp.toDouble()) != (int) dExp || dExp < 0)
-                throw new IllegalArgumentException("Illegal polynom expression: non-natural indeterminant exponent");
+                throw new MathExpressionSyntaxException("Illegal polynom expression: non-natural indeterminant exponent");
             return (int) dExp;
         }
         if(containsIndeterminant(product, indeterminant))
-            throw new IllegalArgumentException("Illegal polynom expression: indeterminant not allowed here");
+            throw new MathExpressionSyntaxException("Illegal polynom expression: indeterminant not allowed here");
         factors.add(product);
         return 0;
     }

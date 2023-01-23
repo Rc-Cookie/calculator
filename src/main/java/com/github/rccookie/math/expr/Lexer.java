@@ -49,7 +49,7 @@ class Lexer extends StepIterator<Token> {
 
     Lexer(String source) {
         if(source.contains("" + (char) 0))
-            throw new IllegalArgumentException("Null character in source string");
+            throw new MathExpressionSyntaxException("Null character in source string");
         this.src = (source + (char) 0).toCharArray();
         isAbs.push(false);
     }
@@ -61,7 +61,7 @@ class Lexer extends StepIterator<Token> {
             if(t == Token.LEFT_PARENTHESIS || t == Token.LEFT_BRACKET)
                 isAbs.push(last == Token.ABS);
             else if((t == Token.RIGHT_PARENTHESIS || t == Token.RIGHT_BRACKET) && isAbs.pop())
-                throw new IllegalArgumentException("Mismatched abs");
+                throw new MathExpressionSyntaxException("Mismatched abs");
 
             last = t;
             return last;
@@ -83,12 +83,12 @@ class Lexer extends StepIterator<Token> {
             }
             case ')' -> {
                 if(isAbs.pop())
-                    throw new IllegalArgumentException("Mismatched abs");
+                    throw new MathExpressionSyntaxException("Mismatched abs");
                 yield Token.RIGHT_PARENTHESIS;
             }
             case ']' -> {
                 if(isAbs.pop())
-                    throw new IllegalArgumentException("Mismatched abs");
+                    throw new MathExpressionSyntaxException("Mismatched abs");
                 yield Token.RIGHT_BRACKET;
             }
 
@@ -147,7 +147,7 @@ class Lexer extends StepIterator<Token> {
             }
             default -> {
                 if(!isIdentifierChar(c))
-                    throw new IllegalArgumentException("Unexpected character '" + c + "'");
+                    throw new MathExpressionSyntaxException("Unexpected character '" + c + "'");
                 String name = c + readIdentifier();
                 skipWhitespaces();
                 if(src[p] == '(') {
@@ -174,7 +174,7 @@ class Lexer extends StepIterator<Token> {
         if(required) {
             char c = src[p++];
             if(c < '0' || c > '9')
-                throw new IllegalArgumentException("Number expected");
+                throw new MathExpressionSyntaxException("Number expected");
             num.append(c);
         }
         while (src[p] >= '0' && src[p] <= '9')

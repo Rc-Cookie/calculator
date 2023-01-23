@@ -15,6 +15,9 @@ import com.github.rccookie.math.expr.SymbolLookup;
 import com.github.rccookie.util.Console;
 import com.github.rccookie.util.UncheckedException;
 
+/**
+ * A collection of constants and formulas, to be loaded into a {@link Calculator}.
+ */
 public interface FormulaPackage extends JsonSerializable {
 
     Object _ignore = registerJson();
@@ -39,6 +42,14 @@ public interface FormulaPackage extends JsonSerializable {
         return json;
     }
 
+    /**
+     * Attempts to load the specified package, either from inside the jar in the directory "packages",
+     * or in the directory "packages" on the same level as the jar file.
+     *
+     * @param name The name of the package to load
+     * @return The loaded package
+     * @throws RuntimeException If an exception occurs or the package can't be found
+     */
     static FormulaPackage load(String name) {
         name = name.toLowerCase();
         Path jarDirPath;

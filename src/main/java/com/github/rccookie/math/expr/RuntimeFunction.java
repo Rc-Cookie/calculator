@@ -39,7 +39,7 @@ record RuntimeFunction(Expression expr, String... paramNames)
                 results[i] = Expression.of(evaluateFunction(lookup, l.evaluate(i, lookup)));
             return new NumbersImpl(results);
         }
-        throw new ArithmeticException("Too many arguments (" + l.size() + ") applied to operation, expected " + paramNames.length);
+        throw new MathEvaluationException("Too many arguments (" + l.size() + ") applied to operation, expected " + paramNames.length);
     }
 
     private Number evaluateFunction(SymbolLookup lookup, Number... params) {
@@ -76,24 +76,24 @@ record RuntimeFunction(Expression expr, String... paramNames)
         if(signature instanceof Symbol s) // x -> ...
             return new RuntimeFunction(body, s.name());
         if(!(signature instanceof Numbers n))
-            throw new IllegalArgumentException("Illegal lambda signature");
+            throw new MathExpressionSyntaxException("Illegal lambda signature");
         return new RuntimeFunction(body, n.stream().map(e -> {
             if(!(e instanceof Symbol s))
-                throw new IllegalArgumentException("Illegal lambda signature");
+                throw new MathExpressionSyntaxException("Illegal lambda signature");
             return s.name();
         }).toArray(String[]::new)); // (a,b,c) -> ...
     }
 
     static RuntimeFunction parseDefinition(Expression signature, Expression body) {
         if(!(signature instanceof ImplicitOperation o))
-            throw new IllegalArgumentException("Invalid function signature");
+            throw new MathExpressionSyntaxException("Invalid function signature");
         if(o.b() instanceof Symbol s)
             return new RuntimeFunction(body, s.name()); // f x := ...
         if(!(o.b() instanceof Numbers n))
-            throw new IllegalArgumentException("Invalid function signature");
+            throw new MathExpressionSyntaxException("Invalid function signature");
         return new RuntimeFunction(body, n.stream().map(e -> { // f(a,b,c) := ...
             if(!(e instanceof Symbol s))
-                throw new IllegalArgumentException("Invalid function signature");
+                throw new MathExpressionSyntaxException("Invalid function signature");
             return s.name();
         }).toArray(String[]::new));
     }

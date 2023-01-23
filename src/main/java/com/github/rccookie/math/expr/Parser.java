@@ -11,8 +11,8 @@ final class Parser {
             case Token.Symbol v -> v;
             case Token.Operator o -> o.apply(stack);
         });
-        if(stack.size() > 1) //throw new AssertionError();
-            throw new IllegalArgumentException("Mismatched parenthesis / brackets");
+        if(stack.size() > 1 || stack.peek() instanceof Builder) //throw new AssertionError();
+            throw new MathExpressionSyntaxException("Mismatched parenthesis / brackets");
         return Expression.of(stack.pop());
     }
 
@@ -21,14 +21,14 @@ final class Parser {
         @Override
         public synchronized Expression peek() {
             if(isEmpty())
-                throw new IllegalArgumentException("Expression expected");
+                throw new MathExpressionSyntaxException("Expression expected");
             return super.peek();
         }
 
         @Override
         public synchronized Expression pop() {
             if(isEmpty())
-                throw new IllegalArgumentException("Expression expected");
+                throw new MathExpressionSyntaxException("Expression expected");
             return super.pop();
         }
     }

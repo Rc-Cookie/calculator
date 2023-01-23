@@ -48,7 +48,7 @@ record FunctionDefinition(String name, Expression signature, Function function)
 
     private static String parseName(Expression signature) {
         if(!(signature instanceof ImplicitOperation o) || !(o.a() instanceof Symbol s))
-            throw new IllegalArgumentException("Invalid operation signature");
+            throw new MathExpressionSyntaxException("Invalid operation signature");
         return s.name();
     }
 

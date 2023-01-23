@@ -4,17 +4,18 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Stack;
 
 import com.github.rccookie.json.JsonObject;
 import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.SimpleNumber;
+import com.github.rccookie.math.expr.DefaultSymbolLookup;
 import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.Functions;
+import com.github.rccookie.math.expr.MathEvaluationException;
+import com.github.rccookie.math.expr.MathExpressionSyntaxException;
 import com.github.rccookie.math.expr.SymbolLookup;
 import com.github.rccookie.util.ArgsParser;
 import com.github.rccookie.util.Arguments;
@@ -22,9 +23,22 @@ import com.github.rccookie.util.Console;
 import com.github.rccookie.util.Utils;
 import com.github.rccookie.util.config.Config;
 
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * The calculator class can evaluate expressions and manages stored
+ * variables. It also contains many default variables and adds support
+ * for {@link FormulaPackage}s.
+ *
+ * <p>The calculator has an command line interface using the {@link #main(String[])}
+ * function.</p>
+ */
 public class Calculator {
 
-    public static final String VERSION = "2.6";
+    /**
+     * Version of this calculator API.
+     */
+    public static final String VERSION = "2.7";
 
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
             "precision", 50,
@@ -94,17 +108,34 @@ public class Calculator {
     private String lastExpr = "ans";
     private int moreCount = 0;
 
-    public Number getVar(String name) {
-        return lookup.get(name);
+
+    /**
+     * Returns a mutable reference to the variables in the calculator. Some variable names
+     * are protected for modification. Subsequent changes to the variables in the calculator
+     * will be reflected in the returned lookup, and vice versa.
+     *
+     * @return The variables in this calculator
+     */
+    public SymbolLookup variables() {
+        return lookup;
     }
 
-    public void setVar(String name, Number var) {
-        lookup.put(name, var);
-    }
 
-
-
-    public Number evaluateSmart(String expression) {
+    /**
+     * "Smartly" parses and evaluates the given expression. This is similar to
+     * {@link #evaluate(String)}, but adds some conveniences:
+     * <ul>
+     *     <li>If the expression is blank, the previous expression will be evaluated again.
+     *     The default previous expression is 'ans'.</li>
+     *     <li>If the expression starts with a binary operator or postfix unary operator, 'ans'
+     *     will be inserted before the expression (this gives the illusion to operate on the
+     *     previous result)</li>
+     * </ul>
+     *
+     * @param expression The expression to evaluate
+     * @return The evaluated expression
+     */
+    public Number evaluateSmart(String expression) throws MathExpressionSyntaxException, MathEvaluationException {
         expression = expression.trim();
         if(expression.isEmpty())
             return evaluate(lastExpr);
@@ -114,7 +145,14 @@ public class Calculator {
         return evaluate(expression);
     }
 
-    public Number evaluate(String expression) {
+    /**
+     * Parses and evaluates the given math expression and returns the result.
+     * This may use or modify the variables in this calculator.
+     *
+     * @param expression The expression to evaluate
+     * @return The value of the expression
+     */
+    public Number evaluate(String expression) throws MathExpressionSyntaxException, MathEvaluationException {
         Expression expr = Expression.parse(expression);
         Console.debug("Expression:");
         Console.debug(expr);
@@ -125,12 +163,17 @@ public class Calculator {
         Console.debug("Result:");
         Console.debug(Expression.of(ans).toTreeString());
         lastExpr = expression;
-        lookup.variables.put("ans", Expression.Function.of(ans));
+        lookup.setAns(ans);
         return ans;
     }
 
 
-
+    /**
+     * Entry point for the command line interface of the calculator.
+     *
+     * @param args Command line args, run --help for more detail
+     * @throws IOException If an IO exception occurs
+     */
     public static void main(String[] args) throws IOException {
         ArgsParser parser = new ArgsParser();
         parser.addDefaults();
@@ -162,14 +205,14 @@ public class Calculator {
             checkReg();
 
         Calculator calculator = new Calculator();
-        calculator.setVar("exit", new Rational(0));
+        calculator.variables().put("exit", new Rational(0));
         Rational.setToStringMode(Rational.ToStringMode.SMART_SCIENTIFIC);
 
         Config config = Config.fromAppdataPath("Calculator");
         try {
             config.setDefaults(DEFAULT_SETTINGS);
-            calculator.setVar("precision", new Rational(config.getInt("precision")));
-            calculator.setVar("scientific", config.getBool("scientific") ? Number.ONE() : Number.ZERO());
+            calculator.variables().put("precision", new Rational(config.getInt("precision")));
+            calculator.variables().put("scientific", config.getBool("scientific") ? Number.ONE() : Number.ZERO());
         } catch(Exception e) {
             System.err.println("Failed to load settings");
             if(Console.getFilter().isEnabled("debug"))
@@ -200,22 +243,25 @@ public class Calculator {
             else {
                 moreCount = 0;
                 Number res = evaluateSmart(expr);
-                printResLn(res, null);
+                printRes(res, null);
             }
+        } catch(MathExpressionSyntaxException e) {
+            System.err.println("Illegal expression: " + e.getMessage());
+            if(Console.getFilter().isEnabled("debug"))
+                e.printStackTrace();
+        } catch(MathEvaluationException e) {
+            System.err.println(e.getMessage());
+            if(Console.getFilter().isEnabled("debug"))
+                e.printStackTrace();
         } catch (Throwable t) {
             String msg = t.getMessage();
-            System.err.println(msg != null ? msg : "Illegal expression");
+            System.err.println(msg != null ? msg : "Internal error");
             if(Console.getFilter().isEnabled("debug"))
                 t.printStackTrace();
         }
     }
 
-    private void printResLn(Number res, Rational.ToStringMode mode) {
-        printRes(res, mode, false);
-        System.out.println();
-    }
-
-    private void printRes(Number res, Rational.ToStringMode mode, boolean forceEqualSign) {
+    private void printRes(Number res, Rational.ToStringMode mode) {
         while(res instanceof Expression.Function f && f.paramCount() == 0)try {
             Number val = f.evaluate(lookup, Expression.Numbers.EMPTY);
             if(res.equals(val)) break;
@@ -227,7 +273,7 @@ public class Calculator {
         }
 
         if(res instanceof Expression && !(res instanceof Expression.Numbers))
-            System.out.print((forceEqualSign ? "= " : "") + res);
+            System.out.print(res);
         else if(res instanceof Rational r) {
             Rational.DetailedToString str = mode != null ? r.detailedToString(mode) : r.detailedToString();
             System.out.print(str.precise() ? '=' : ABOUT_EQUAL);
@@ -242,32 +288,24 @@ public class Calculator {
         else if(res instanceof SimpleNumber n && !n.precise() || res instanceof Complex c && !c.precise())
             System.out.print(ABOUT_EQUAL + " " + res);
         else System.out.print("= " + res);
-
-//        if(res instanceof Expression.Function f && f.paramCount() == 0) try {
-//            Number val = f.evaluate(lookup, Expression.Numbers.EMPTY);
-//            if(f.equals(val)) return;
-//            System.out.print(' ');
-//            printRes(val, mode, true);
-//        } catch(Exception e) {
-//            Console.debug("Failed to evaluate parameter-less function:");
-//            Console.debug(Utils.getStackTraceString(e));
-//        }
+        System.out.println();
     }
 
     private void evalCommand(String cmd) {
         Console.mapDebug("Received command", cmd);
         String[] cmds = cmd.split("\s+");
+        cmds[0] = cmds[0].toLowerCase();
         switch(cmds[0]) {
             case "exit" -> {
                 try {
-                    System.exit((int) getVar("exit").toDouble(lookup));
+                    System.exit((int) lookup.get("exit").toDouble(lookup));
                 } catch(Exception e) {
                     if(Console.getFilter().isEnabled("debug"))
                         e.printStackTrace();
                     System.exit(-1);
                 }
             }
-            case "vars" -> lookup.variables.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(var -> {
+            case "vars" -> lookup.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(var -> {
                 if(var.getValue() instanceof Expression.Function f) {
                     System.out.print(var.getKey() + "(" + String.join(",", f.paramNames()) + ")");
                     if(!DEFAULT_VARS.containsKey(var.getKey()))
@@ -282,16 +320,16 @@ public class Calculator {
                 Number res = lookup.get("ans");
                 int precision = Rational.getPrecision();
                 Rational.setPrecision(precision << moreCount);
-                printResLn(res, null);
+                printRes(res, null);
                 Rational.setPrecision(precision);
             }
             case "frac" -> {
                 Number res = lookup.get("ans");
-                printResLn(res, Rational.ToStringMode.FORCE_FRACTION);
+                printRes(res, Rational.ToStringMode.FORCE_FRACTION);
             }
             case "dec" -> {
                 Number res = lookup.get("ans");
-                printResLn(res, Rational.ToStringMode.FORCE_DECIMAL);
+                printRes(res, Rational.ToStringMode.FORCE_DECIMAL);
             }
             case "bin" -> {
                 Number res = lookup.get("ans");
@@ -303,15 +341,21 @@ public class Calculator {
             }
             case "radix" -> {
                 if(cmds.length != 2)
-                    throw new IllegalArgumentException("Usage: \\radix <radix>");
+                    throw new IllegalCommandException("Usage: \\radix <radix>");
                 Number res = lookup.get("ans");
                 int radix = Integer.parseInt(cmds[1]);
                 System.out.println(getInt(res).toString(radix));
             }
+            case "del", "delete" -> {
+                if(cmds.length == 1)
+                    throw new IllegalCommandException("Usage: \\" + cmds[0] + " <var [var2 var3...]>");
+                for(int i=1; i<cmds.length; i++)
+                    lookup.delete(cmds[i]);
+            }
             case "load" -> {
                 if(cmds.length != 2)
-                    System.err.println("Usage: \\load <packageName>, i.e. \\load physics");
-                else FormulaPackage.load(cmds[1]).addTo(lookup);
+                    throw new IllegalCommandException("Usage: \\load <packageName>, i.e. \\load physics");
+                FormulaPackage.load(cmds[1]).addTo(lookup);
             }
             case "help" -> System.out.println("""
                     Enter a math expression to be evaluated. Supported features:
@@ -333,7 +377,7 @@ public class Calculator {
                      - Set the variable 'precision' to set the approximate decimal number precision (>1, default is 100)
                      - Set the variable 'scientific' to something other than 0 to enable scientific notation output
                      - Set the variable 'exit' to a desired value to set the exit code of the program, exit with \\exit""");
-            default -> System.out.println("Unknown command: '\\" + cmd + "'");
+            default -> throw new IllegalCommandException("Unknown command: '\\" + cmd + "'");
         }
     }
 
@@ -368,63 +412,40 @@ public class Calculator {
             return r.n;
         if(n instanceof Complex c && c.isReal() && c.re instanceof Rational r && r.d.equals(BigInteger.ONE))
             return r.n;
-        throw new IllegalArgumentException("Not an integer");
+        throw new MathExpressionSyntaxException("Cannot calculate radix rendering for non-integer");
     }
 
 
 
-    private static class Lookup implements SymbolLookup {
+    private static class Lookup extends DefaultSymbolLookup {
 
-        private final Map<String, Number> variables = new HashMap<>();
         {
-            variables.putAll(DEFAULT_VARS);
-            variables.putAll(OPTIONAL_DEFAULT_VARS);
+            DEFAULT_VARS.forEach(super::put);
+            OPTIONAL_DEFAULT_VARS.forEach(super::put);
         }
-
-        private final Map<String, Stack<Number>> localVariables = new HashMap<>();
 
         @Override
         public Number get(String name) {
-            Stack<Number> localVars = localVariables.get(name);
-            if(localVars != null) return localVars.peek();
-
-            Number var = variables.get(name);
-            if(var == null)
-                throw new IllegalArgumentException("Unknown variable or function: '" + name + "'");
+            Number var = super.get(name);
             return var instanceof Rational r && !r.precise ? new Rational(r.toBigDecimal(), false) : var; // Round high-precision constants
         }
 
         @Override
-        public void pushLocal(String name, Number var) {
-            localVariables.computeIfAbsent(name, n -> new Stack<>()).push(var);
-        }
-
-        @Override
-        public void popLocal(String name) {
-            Stack<Number> localVars = localVariables.get(name);
-            if(localVars == null) {
-                Console.warn("Removing non-existent local variable");
-                return;
-            }
-            localVars.pop();
-            if(localVars.isEmpty())
-                localVariables.remove(name);
-        }
-
-        @Override
-        public void put(String name, Number var) {
+        public void put(String name, @Nullable Number var) {
             if(DEFAULT_VARS.containsKey(name))
-                throw new IllegalArgumentException("Cannot override variable '"+name+"'");
+                throw new MathEvaluationException("Cannot override variable '"+name+"'");
             switch (name) {
                 case "precision" -> {
-                    int p = (int) var.toDouble(this);
+                    assert var != null;
+                    int p = (int) Arguments.checkNull(var, "var").toDouble(this);
                     if(p < 2)
-                        throw new IllegalArgumentException("precision < 2");
+                        throw new MathEvaluationException("precision < 2");
                     Rational.setPrecision(p);
                     var = new Rational(p);
                 }
                 case "scientific" -> {
-                    boolean scientific = !var.equals(Number.ZERO());
+                    assert var != null;
+                    boolean scientific = !Arguments.checkNull(var, "var").equals(Number.ZERO());
                     Rational.setToStringMode(switch(Rational.getToStringMode()) {
                         case SMART, SMART_SCIENTIFIC -> scientific ? Rational.ToStringMode.SMART_SCIENTIFIC : Rational.ToStringMode.SMART;
                         case DECIMAL_IF_POSSIBLE, DECIMAL_IF_POSSIBLE_SCIENTIFIC -> scientific ? Rational.ToStringMode.DECIMAL_IF_POSSIBLE_SCIENTIFIC : Rational.ToStringMode.DECIMAL_IF_POSSIBLE;
@@ -432,8 +453,15 @@ public class Calculator {
                         case FORCE_DECIMAL, FORCE_DECIMAL_SCIENTIFIC -> scientific ? Rational.ToStringMode.FORCE_DECIMAL_SCIENTIFIC : Rational.ToStringMode.FORCE_DECIMAL;
                     });
                 }
+                case "exit" -> {
+                    if(var == null) throw new MathEvaluationException("Cannot delete variable 'exit'");
+                }
             }
-            variables.put(name, Arguments.checkNull(var, "var"));
+            super.put(name, var);
+        }
+
+        void setAns(Number ans) {
+            super.put("ans", Expression.Function.of(ans));
         }
     }
 }

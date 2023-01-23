@@ -4,12 +4,13 @@ import java.util.Arrays;
 
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.expr.Expression;
+import com.github.rccookie.math.expr.MathExpressionSyntaxException;
 
 record LinearFunctionImpl(String[] indeterminants, Expression[] coefficients, Expression offset) implements LinearFunction {
 
     LinearFunctionImpl(String[] indeterminants, Expression[] coefficients, Expression offset) {
         if(indeterminants.length != coefficients.length)
-            throw new IllegalArgumentException("Indeterminant count must be equal to coefficient count");
+            throw new MathExpressionSyntaxException("Indeterminant count must be equal to coefficient count");
         this.indeterminants = indeterminants.clone();
         this.coefficients = coefficients.clone();
         this.offset = offset;

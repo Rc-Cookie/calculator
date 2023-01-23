@@ -33,25 +33,23 @@ final class Builder implements Expression {
 
     static Expression append(Stack<? extends Expression> stack) {
         Expression element = stack.pop();
-        Expression elements = stack.pop();
-        if(elements instanceof Builder b) {
-            b.append(element);
-            return b;
-        }
-        throw new AssertionError();
-//        return new Builder(elements, element);
+        Expression eb = stack.pop();
+        if(!(eb instanceof Builder b))
+            throw new MathExpressionSyntaxException("Illegal location for comma");
+        b.append(element);
+        return b;
     }
 
     static Expression buildList(Stack<? extends Expression> stack) {
         Expression x = stack.pop();
         if(x instanceof Builder b) {
             if(!b.elements.isEmpty())
-                throw new IllegalArgumentException("Trailing comma in list");
+                throw new MathExpressionSyntaxException("Trailing comma in list");
             return Numbers.EMPTY;
         }
         Expression bx = stack.pop();
         if(!(bx instanceof Builder b))
-            throw new AssertionError();
+            throw new MathExpressionSyntaxException("Illegal location for comma");
         b.append(x);
         return b.buildList();
     }
@@ -60,12 +58,12 @@ final class Builder implements Expression {
         Expression x = stack.pop();
         if(x instanceof Builder b) {
             if(!b.elements.isEmpty())
-                throw new IllegalArgumentException("Trailing comma in vector");
-            throw new IllegalArgumentException("Vector requires at least one component");
+                throw new MathExpressionSyntaxException("Trailing comma in vector");
+            throw new MathExpressionSyntaxException("Vector requires at least one component");
         }
         Expression bx = stack.pop();
         if(!(bx instanceof Builder b))
-            throw new AssertionError();
+            throw new MathExpressionSyntaxException("Illegal location for comma");
         b.append(x);
         return b.buildVector();
     }

@@ -3,10 +3,13 @@ package com.github.rccookie.math.expr;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 import com.github.rccookie.math.Number;
 import com.github.rccookie.util.Arguments;
+
+import org.jetbrains.annotations.Nullable;
 
 public class DefaultSymbolLookup implements SymbolLookup {
 
@@ -21,7 +24,7 @@ public class DefaultSymbolLookup implements SymbolLookup {
 
         Number var = variables.get(name);
         if(var == null)
-            throw new IllegalArgumentException("Unknown variable or function: '" + name + "'");
+            throw new MathEvaluationException("Unknown variable or function: '" + name + "'");
         return var;
     }
 
@@ -39,7 +42,15 @@ public class DefaultSymbolLookup implements SymbolLookup {
     }
 
     @Override
-    public void put(String name, Number var) {
-        variables.put(name, Arguments.checkNull(var, "var"));
+    public void put(String name, @Nullable Number var) {
+        Arguments.checkNull(name, "name");
+        if(var == null)
+            variables.remove(name);
+        else variables.put(name, var);
+    }
+
+    @Override
+    public Set<Map.Entry<String, Number>> entrySet() {
+        return variables.entrySet();
     }
 }

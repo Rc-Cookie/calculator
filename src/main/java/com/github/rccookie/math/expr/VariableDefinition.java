@@ -47,7 +47,7 @@ record VariableDefinition(Expression nameExpr, String name, Expression expr) imp
 
     private static String getName(Expression nameExpr) {
         if(!(nameExpr instanceof Expression.Symbol s))
-            throw new IllegalArgumentException("Illegal variable declaration syntax");
+            throw new MathExpressionSyntaxException("Illegal variable declaration syntax");
         return s.name();
     }
 }

@@ -4,11 +4,10 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.security.ProviderException;
 import java.util.Collections;
 import java.util.Vector;
 
-import com.github.rccookie.util.Console;
+import com.github.rccookie.math.expr.UnsupportedMathOperationException;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -839,7 +838,7 @@ public final class BigDecimalMath
          * implemented to decompose larger powers into cascaded calls to smaller ones.
          */
         if ( n.compareTo(Rational.MAX_INT) > 0 || n.compareTo(Rational.MIN_INT) < 0)
-            throw new ProviderException("Not implemented: big power "+n.toString() ) ;
+            throw new UnsupportedMathOperationException("Not implemented: big power "+n) ;
         else
             return powRound(x,n.intValue() ) ;
     } /* com.github.rccookie.math.BigDecimalMath.powRound */
@@ -1882,7 +1881,7 @@ public final class BigDecimalMath
         /* reduce to interval near 1.0 with the functional relation, Abramowitz-Stegun 6.1.33
          */
         if ( n < 0 )
-            throw new ProviderException("Not implemented: pochhammer with negative index "+n) ;
+            throw new UnsupportedMathOperationException("pochhammer with negative argument") ;
         else if ( n == 0 )
             return BigDecimal.ONE ;
         else
@@ -1995,7 +1994,7 @@ public final class BigDecimalMath
     static public BigDecimal zeta(final int n, final MathContext mc)
     {
         if( n <= 0 )
-            throw new ProviderException("Not implemented: zeta at negative argument "+n) ;
+            throw new UnsupportedMathOperationException("zeta with negative argument");
         if( n == 1 )
             throw new ArithmeticException("Pole at zeta(1) ") ;
 
@@ -2213,7 +2212,7 @@ public final class BigDecimalMath
                 1.577721810442023616644432780e-30,7.888609052210118073520537800e-31
         } ;
         if( n <= 0 )
-            throw new ProviderException("Not implemented: zeta at negative argument "+n) ;
+            throw new UnsupportedMathOperationException("zeta with negative argument");
         if( n == 1 )
             throw new ArithmeticException("Pole at zeta(1) ") ;
 
@@ -4808,16 +4807,5 @@ public final class BigDecimalMath
             log++;
         }
         return log;
-    }
-
-
-    public static void main(String[] args) {
-        while(true) {
-            BigInteger in = new BigInteger(Console.input(">"));
-            BigInteger factor = getFactorToPowerOfTen(in);
-            Console.log(factor);
-            if(factor != null)
-                Console.log(in.multiply(factor));
-        }
     }
 } /* com.github.rccookie.math.BigDecimalMath */

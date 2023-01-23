@@ -570,7 +570,7 @@ public interface Expression extends Number {
         default Number evaluate(SymbolLookup lookup) {
             if(paramCount() == 0) try {
                 return evaluate(lookup, Numbers.EMPTY);
-            } catch(IllegalArgumentException e) {
+            } catch(MathEvaluationException|MathExpressionSyntaxException e) {
                 Console.debug("Failed to evaluate parameter-less function, returning function expression:");
                 Console.debug(Utils.getStackTraceString(e));
             }
@@ -748,12 +748,19 @@ public interface Expression extends Number {
         }
 
         static Function of(Number expr) {
-            return new RuntimeFunction(Expression.of(expr));
+            return expr instanceof Function f ? f : new RuntimeFunction(Expression.of(expr));
         }
     }
 
+    /**
+     * A unary operation on a function, for example "-sin"
+     */
     interface UnaryFunctionOperation extends Function, UnaryOperation { }
 
+    /**
+     * A binary operation, where the first operand is a function, for
+     * example "sin*2".
+     */
     interface BinaryFunctionOperation extends Function, BinaryOperation {
         @Override
         default Number evaluate(SymbolLookup lookup) {

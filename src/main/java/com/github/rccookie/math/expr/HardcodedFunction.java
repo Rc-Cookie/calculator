@@ -72,7 +72,7 @@ record HardcodedFunction(String name, BiFunction<SymbolLookup,Number[],Number> f
                 results[i] = Expression.of(function.apply(lookup, new Number[] { l.evaluate(i, lookup) }));
             return new NumbersImpl(results);
         }
-        throw new ArithmeticException("Too many arguments (" + l.size() + ") applied to operation "+name+", expected "+paramCount());
+        throw new MathEvaluationException("Too many arguments (" + l.size() + ") applied to operation "+name+", expected "+paramCount());
     }
 
     @Override

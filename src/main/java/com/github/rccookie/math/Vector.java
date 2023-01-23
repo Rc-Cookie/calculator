@@ -198,7 +198,7 @@ public class Vector implements Number {
     @NotNull
     public Vector cross(Vector x) {
         if(components.length != 3 || x.components.length != 3)
-            throw new UnsupportedOperationException("Cross product only defined for 3d vectors");
+            throw new ArithmeticException("Cross product only defined for 3d vectors");
         return new Vector(true,
                 y().multiply(x.z()).subtract(z().multiply(x.y())),
                 z().multiply(x.x()).subtract(x().multiply(x.z())),
