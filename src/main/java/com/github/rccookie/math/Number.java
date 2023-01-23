@@ -1,10 +1,13 @@
 package com.github.rccookie.math;
 
+import com.github.rccookie.json.JsonDeserialization;
+import com.github.rccookie.json.JsonSerializable;
+import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.SymbolLookup;
 
 import org.jetbrains.annotations.NotNull;
 
-public interface Number {
+public interface Number extends JsonSerializable {
 
     @NotNull static SimpleNumber ZERO() { return Rational.ZERO; }
     @NotNull static SimpleNumber ONE() { return Rational.ONE; }
@@ -21,6 +24,22 @@ public interface Number {
     @NotNull static SimpleNumber RAD_TO_DEG() { return Rational.RAD_TO_DEG; }
     @NotNull static SimpleNumber DEG_TO_RAD() { return Rational.DEG_TO_RAD; }
 
+
+    Object _null = registerJson();
+    private static Object registerJson() {
+        JsonDeserialization.register(Number.class, json -> {
+            if(json.isArray()) return json.as(Vector.class);
+            if(json.isNumber()) return json.as(SimpleNumber.class);
+            if(json.isString()) {
+                Expression expr = json.as(Expression.class).simplify();
+                return expr instanceof Expression.Constant c ? c.value() : expr;
+            }
+            if(json.containsKey("re")) return json.as(Complex.class);
+//            if(json.containsKey("n") || json.containsKey("factor") || json.containsKey("precise"))
+            return json.as(Rational.class);
+        });
+        return null;
+    }
 
 
     @NotNull

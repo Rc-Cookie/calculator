@@ -24,6 +24,8 @@ import com.github.rccookie.util.config.Config;
 
 public class Calculator {
 
+    public static final String VERSION = "2.6";
+
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
             "precision", 50,
             "scientific", false
@@ -138,9 +140,7 @@ public class Calculator {
                     evalInput(calculator, expressions);
                     evalCommand(calculator, "exit");
                 });
-        parser.setName("""
-                        Java math interpreter - version 2.5
-                        By RcCookie""");
+        parser.setName("Java math interpreter - version " + VERSION + "\nBy RcCookie");
         parser.setDescription("""
                         
                         Usage: math [--options] [expression]
@@ -153,10 +153,10 @@ public class Calculator {
             evalCommand(calculator, "exit");
         }
 
-        System.out.println("""
-                        Java math interpreter - version 2.5
-                        By RcCookie
-                        -----------------------------------""");
+        System.out.println("Java math interpreter - version " + VERSION + """
+                            
+                            By RcCookie
+                            -----------------------------------""");
 
         if(System.getProperty("os.name").toLowerCase().contains("windows"))
             checkReg();
@@ -288,9 +288,7 @@ public class Calculator {
             case "load" -> {
                 if(cmds.length != 2)
                     System.err.println("Usage: \\load <packageName>, i.e. \\load physics");
-                else if(!FormulaPackage.PACKAGES.containsKey(cmds[1].toLowerCase()))
-                    System.err.println("Unknown package " + cmds[1] + ", available: " + String.join(", ", FormulaPackage.PACKAGES.keySet()));
-                else FormulaPackage.PACKAGES.get(cmds[1].toLowerCase()).addTo(calculator.lookup);
+                else FormulaPackage.load(cmds[1]).addTo(calculator.lookup);
             }
             case "help" -> System.out.println("""
                     Enter a math expression to be evaluated. Supported features:

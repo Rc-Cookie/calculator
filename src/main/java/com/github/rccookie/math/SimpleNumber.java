@@ -2,9 +2,17 @@ package com.github.rccookie.math;
 
 import java.math.BigDecimal;
 
+import com.github.rccookie.json.JsonDeserialization;
+
 import org.jetbrains.annotations.NotNull;
 
 public interface SimpleNumber extends Number {
+
+    Object _nothing = registerJson();
+    private static Object registerJson() {
+        JsonDeserialization.register(SimpleNumber.class, json -> json.as(Rational.class));
+        return null;
+    }
 
 
     boolean precise();

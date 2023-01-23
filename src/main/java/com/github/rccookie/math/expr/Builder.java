@@ -19,6 +19,10 @@ final class Builder implements Expression {
         elements.add(second);
     }
 
+//    static Expression startList(Stack<? extends Expression> stack) {
+//        return new Builder(
+//    }
+
     static Expression append(Stack<? extends Expression> stack) {
         Expression element = stack.pop();
         Expression elements = stack.pop();

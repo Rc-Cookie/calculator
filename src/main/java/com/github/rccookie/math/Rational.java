@@ -6,6 +6,8 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.function.Function;
 
+import com.github.rccookie.json.JsonDeserialization;
+import com.github.rccookie.json.JsonObject;
 import com.github.rccookie.math.expr.SymbolLookup;
 import com.github.rccookie.util.Arguments;
 
@@ -13,6 +15,35 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class Rational implements SimpleNumber {
+
+    static {
+        JsonDeserialization.register(Rational.class, json -> {
+            if(json.isNumber()) {
+                if(json.toString().contains("."))
+                    return new Rational(json.asDouble());
+                return new Rational(json.asLong());
+            }
+            if(json.isString())
+                return new Rational(new BigDecimal(json.asString()));
+
+            boolean precise = json.get("precise").or(true);
+            if(json.containsKey("value"))
+                return new Rational(new BigDecimal(json.get("value").toString()), precise);
+            if(json.containsKey("n")) {
+                return new Rational(
+                        new BigInteger(json.get("n").toString()),
+                        json.containsKey("d") ? new BigInteger(json.get("d").toString()) : BigInteger.ONE,
+                        precise
+                );
+            }
+            return new Rational(
+                    new BigDecimal(json.get("factor").toString()),
+                    json.get("exp").asInt(),
+                    precise,
+                    false
+            );
+        });
+    }
 
     @NotNull
     private static ToStringMode toStringMode = ToStringMode.SMART;
@@ -141,6 +172,15 @@ public class Rational implements SimpleNumber {
 
     public DetailedToString detailedToString(ToStringMode mode) {
         return mode.toString(this);
+    }
+
+    @Override
+    public Object toJson() {
+        return new JsonObject(
+                "n", n.toString(),
+                "d", d.toString(),
+                "precise", precise
+        );
     }
 
     @Override

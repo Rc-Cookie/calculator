@@ -41,10 +41,10 @@ record ImplicitOperationImpl(Expression a, Expression b)
     }
 
     @Override
-    public Number evaluateHalf(SymbolLookup lookup, Number funcOrElse) {
-        if(funcOrElse instanceof Expression.Function f)
+    public Number evaluateHalf(SymbolLookup lookup, Number ea) {
+        if(ea instanceof Expression.Function f)
             return f.evaluate(lookup, b.evaluate(lookup));
-        return ((BinaryOperation) a.multiply(b)).evaluateHalf(lookup, funcOrElse);
+        return ea.multiply(b.evaluate(lookup));
     }
 
     @Override

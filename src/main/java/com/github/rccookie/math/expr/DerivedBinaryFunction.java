@@ -50,7 +50,7 @@ record DerivedBinaryFunction(
 
     @Override
     public Number evaluateHalf(SymbolLookup lookup, Number params, Number ea) {
-        return Expression.evaluate(operator.apply(ea, b), lookup);
+        return /*Expression.evaluate(*/operator.apply(ea, b.evaluate(lookup));//, lookup);
     }
 
     @Override

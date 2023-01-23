@@ -4,12 +4,22 @@ import java.util.Arrays;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
+import com.github.rccookie.json.JsonArray;
+import com.github.rccookie.json.JsonDeserialization;
 import com.github.rccookie.math.expr.SymbolLookup;
 import com.github.rccookie.util.Arguments;
 
 import org.jetbrains.annotations.NotNull;
 
 public class Vector implements Number {
+
+    static {
+        JsonDeserialization.register(Vector.class, json -> {
+            if(!json.isArray())
+                return new Vector(json.as(Number.class));
+            return new Vector(json.as(Number[].class));
+        });
+    }
 
     private final Number[] components;
 
@@ -63,6 +73,11 @@ public class Vector implements Number {
     }
 
     @Override
+    public Object toJson() {
+        return new JsonArray((Object[]) components.clone());
+    }
+
+    @Override
     public @NotNull Vector equalTo(Number x) {
         return x instanceof Vector v ? equalTo(v) : derive(c -> c.equalTo(x));
     }
@@ -97,8 +112,6 @@ public class Vector implements Number {
         return switch(index) {
             case Vector indices -> get(indices);
             case SimpleNumber n -> get((int) n.toDouble());
-//            case Real r -> get(r.value.intValue());
-//            case Rational r -> get(new Real(r, false).value.intValue());
             default -> throw new UnsupportedOperationException();
         };
     }

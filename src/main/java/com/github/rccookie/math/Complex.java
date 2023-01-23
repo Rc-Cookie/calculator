@@ -1,11 +1,25 @@
 package com.github.rccookie.math;
 
+import com.github.rccookie.json.JsonDeserialization;
+import com.github.rccookie.json.JsonObject;
 import com.github.rccookie.math.expr.Functions;
 import com.github.rccookie.math.expr.SymbolLookup;
 
 import org.jetbrains.annotations.NotNull;
 
 public class Complex implements Number {
+
+    static {
+        JsonDeserialization.register(Complex.class, json -> {
+            if(json.containsKey("re")) {
+                return new Complex(
+                        json.get("re").as(SimpleNumber.class),
+                        json.get("im").or(SimpleNumber.class, Rational.ONE)
+                );
+            }
+            return new Complex(json.as(SimpleNumber.class));
+        });
+    }
 
     public static final Complex ZERO = new Complex(Number.ZERO());
     public static final Complex ONE = new Complex(Number.ONE());
@@ -36,6 +50,11 @@ public class Complex implements Number {
             return re + "-i";
         String imStr = im + "i";
         return imStr.charAt(0) == '-' ? re + imStr : re + "+" + imStr;
+    }
+
+    @Override
+    public Object toJson() {
+        return new JsonObject("re", re, "im", im);
     }
 
     @Override

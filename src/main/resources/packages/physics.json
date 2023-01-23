@@ -1,0 +1,52 @@
+{
+  "g": {
+    "value": 9.81,
+    "precise": false
+  },
+  "c": 299792458,
+  "h": {
+    "factor": 6.62607015,
+    "exp": -34
+  },
+  "E": {
+    "factor": 1.602176634,
+    "exp": -19
+  },
+  "m_e": {
+    "factor": "9.109383701528",
+    "exp": -31,
+    "precise": false
+  },
+  "N_a": {
+    "factor": 6.02214076,
+    "exp": 23,
+    "precise": false
+  },
+  "\u00B50": {
+    "factor": 1.2566370621219,
+    "exp": -6,
+    "precise": false
+  },
+  "ep_0": {
+    "factor": 8.854187812813,
+    "exp": -12,
+    "precise": false
+  },
+  "k_B": {
+    "factor": 1.380649,
+    "exp": -23
+  },
+  "G": {
+    "factor": 6.673,
+    "exp": -11,
+    "precise": false
+  },
+  "F_g": "(m1,m2,d) -> -G * m1 * m2 / (d*d) * (norm(d))",
+  "F_z": "(m,r,v) -> m * v * v / r",
+  "F_s": "(D,dx) -> -D / dx",
+  "F_cw": "(A,cw,rho,v) -> -A/2 * cw * rho * v * v",
+  "F_r": "(F_n,\u00B5) -> |F_n * \u00B5|",
+  "lorenz": "v -> 1 / (sqrt(1 - (v/c)^2)",
+  "p_ideal": "(N,V,T) -> N/V * k_B * T",
+  "F_coriolis": "(m,v,w) -> -2m * cross(v,w)"
+}

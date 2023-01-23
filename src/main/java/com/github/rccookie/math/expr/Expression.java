@@ -9,6 +9,7 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.github.rccookie.json.JsonDeserialization;
 import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
@@ -34,6 +35,13 @@ public interface Expression extends Number {
      * with an effective value of 0.
      */
     static Expression UNSPECIFIED() { return SymbolLookup.UNSPECIFIED_EXPR; }
+
+
+    Object _null = registerJson();
+    private static Object registerJson() {
+        JsonDeserialization.register(Expression.class, json -> parse(json.asString()));
+        return null;
+    }
 
 
     /**
@@ -79,6 +87,11 @@ public interface Expression extends Number {
 
     default String toTreeString() {
         return name() + "[" + Arrays.stream(operands()).map(Expression::toTreeString).collect(Collectors.joining(", ")) + "]";
+    }
+
+    @Override
+    default Object toJson() {
+        return toString();
     }
 
     @Override
