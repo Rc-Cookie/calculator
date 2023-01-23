@@ -125,7 +125,7 @@ public class Calculator {
         Console.debug("Result:");
         Console.debug(Expression.of(ans).toTreeString());
         lastExpr = expression;
-        lookup.variables.put("ans", ans);
+        lookup.variables.put("ans", Expression.Function.of(ans));
         return ans;
     }
 
@@ -137,20 +137,20 @@ public class Calculator {
         parser.addOption('e', "expr", true, "Evaluate the specified expression and exit")
                 .action(expressions -> {
                     Calculator calculator = new Calculator();
-                    evalInput(calculator, expressions);
-                    evalCommand(calculator, "exit");
+                    calculator.evalInput(expressions);
+                    calculator.evalCommand("exit");
                 });
         parser.setName("Java math interpreter - version " + VERSION + "\nBy RcCookie");
         parser.setDescription("""
-                        
+
                         Usage: math [--options] [expression]
                         Evaluate entered math expressions. Evaluate '\\help' to show expressions help.""");
 
         String argsStr = parser.parse(args).getArgsString();
         if(!argsStr.isBlank()) {
             Calculator calculator = new Calculator();
-            evalInput(calculator, argsStr);
-            evalCommand(calculator, "exit");
+            calculator.evalInput(argsStr);
+            calculator.evalCommand("exit");
         }
 
         System.out.println("Java math interpreter - version " + VERSION + """
@@ -179,7 +179,7 @@ public class Calculator {
         //noinspection InfiniteLoopStatement
         while(true) {
             System.out.print("> ");
-            evalInput(calculator, Console.in.readLine());
+            calculator.evalInput(Console.in.readLine());
 
             config.set("precision", Rational.getPrecision());
             config.set("scientific", switch(Rational.getToStringMode()) {
@@ -189,19 +189,18 @@ public class Calculator {
         }
     }
 
-    private static void evalInput(Calculator calculator, String expressions) {
+    private void evalInput( String expressions) {
         if(expressions == null) {
-            evalCommand(calculator, "exit");
+            evalCommand("exit");
             return;
         }
-        Console.mapDebug("Charset", Charset.defaultCharset(), Charset.defaultCharset().newEncoder().canEncode('\u2248'));
         for(String expr : expressions.split(";")) try {
             if(expr.startsWith("\\"))
-                evalCommand(calculator, expr.substring(1));
+                evalCommand(expr.substring(1));
             else {
-                calculator.moreCount = 0;
-                Number res = calculator.evaluateSmart(expr);
-                printRes(res, null);
+                moreCount = 0;
+                Number res = evaluateSmart(expr);
+                printResLn(res, null);
             }
         } catch (Throwable t) {
             String msg = t.getMessage();
@@ -211,9 +210,24 @@ public class Calculator {
         }
     }
 
-    private static void printRes(Number res, Rational.ToStringMode mode) {
+    private void printResLn(Number res, Rational.ToStringMode mode) {
+        printRes(res, mode, false);
+        System.out.println();
+    }
+
+    private void printRes(Number res, Rational.ToStringMode mode, boolean forceEqualSign) {
+        while(res instanceof Expression.Function f && f.paramCount() == 0)try {
+            Number val = f.evaluate(lookup, Expression.Numbers.EMPTY);
+            if(res.equals(val)) break;
+            res = val;
+        } catch(Exception e) {
+            Console.debug("Failed to evaluate parameter-less function, displaying as function:");
+            Console.debug(Utils.getStackTraceString(e));
+            break;
+        }
+
         if(res instanceof Expression && !(res instanceof Expression.Numbers))
-            System.out.println(res);
+            System.out.print((forceEqualSign ? "= " : "") + res);
         else if(res instanceof Rational r) {
             Rational.DetailedToString str = mode != null ? r.detailedToString(mode) : r.detailedToString();
             System.out.print(str.precise() ? '=' : ABOUT_EQUAL);
@@ -224,27 +238,36 @@ public class Calculator {
                 else System.out.print(str.str().substring(0, index) + "..." + str.str().substring(index));
             }
             else System.out.print(str.str());
-            System.out.println();
         }
         else if(res instanceof SimpleNumber n && !n.precise() || res instanceof Complex c && !c.precise())
-            System.out.println(ABOUT_EQUAL + " " + res);
-        else System.out.println("= " + res);
+            System.out.print(ABOUT_EQUAL + " " + res);
+        else System.out.print("= " + res);
+
+//        if(res instanceof Expression.Function f && f.paramCount() == 0) try {
+//            Number val = f.evaluate(lookup, Expression.Numbers.EMPTY);
+//            if(f.equals(val)) return;
+//            System.out.print(' ');
+//            printRes(val, mode, true);
+//        } catch(Exception e) {
+//            Console.debug("Failed to evaluate parameter-less function:");
+//            Console.debug(Utils.getStackTraceString(e));
+//        }
     }
 
-    private static void evalCommand(Calculator calculator, String cmd) {
+    private void evalCommand(String cmd) {
         Console.mapDebug("Received command", cmd);
         String[] cmds = cmd.split("\s+");
         switch(cmds[0]) {
             case "exit" -> {
                 try {
-                    System.exit((int) calculator.getVar("exit").toDouble(calculator.lookup));
+                    System.exit((int) getVar("exit").toDouble(lookup));
                 } catch(Exception e) {
                     if(Console.getFilter().isEnabled("debug"))
                         e.printStackTrace();
                     System.exit(-1);
                 }
             }
-            case "vars" -> calculator.lookup.variables.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(var -> {
+            case "vars" -> lookup.variables.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(var -> {
                 if(var.getValue() instanceof Expression.Function f) {
                     System.out.print(var.getKey() + "(" + String.join(",", f.paramNames()) + ")");
                     if(!DEFAULT_VARS.containsKey(var.getKey()))
@@ -254,41 +277,41 @@ public class Calculator {
                 else System.out.println(var.getKey() + " := " + var.getValue());
             });
             case "more" -> {
-                if(calculator.moreCount < 10)
-                    calculator.moreCount++;
-                Number res = calculator.lookup.get("ans");
+                if(moreCount < 10)
+                    moreCount++;
+                Number res = lookup.get("ans");
                 int precision = Rational.getPrecision();
-                Rational.setPrecision(precision << calculator.moreCount);
-                printRes(res, null);
+                Rational.setPrecision(precision << moreCount);
+                printResLn(res, null);
                 Rational.setPrecision(precision);
             }
             case "frac" -> {
-                Number res = calculator.lookup.get("ans");
-                printRes(res, Rational.ToStringMode.FORCE_FRACTION);
+                Number res = lookup.get("ans");
+                printResLn(res, Rational.ToStringMode.FORCE_FRACTION);
             }
             case "dec" -> {
-                Number res = calculator.lookup.get("ans");
-                printRes(res, Rational.ToStringMode.FORCE_DECIMAL);
+                Number res = lookup.get("ans");
+                printResLn(res, Rational.ToStringMode.FORCE_DECIMAL);
             }
             case "bin" -> {
-                Number res = calculator.lookup.get("ans");
+                Number res = lookup.get("ans");
                 System.out.println(getInt(res).toString(2));
             }
             case "hex" -> {
-                Number res = calculator.lookup.get("ans");
+                Number res = lookup.get("ans");
                 System.out.println(getInt(res).toString(16));
             }
             case "radix" -> {
                 if(cmds.length != 2)
                     throw new IllegalArgumentException("Usage: \\radix <radix>");
-                Number res = calculator.lookup.get("ans");
+                Number res = lookup.get("ans");
                 int radix = Integer.parseInt(cmds[1]);
                 System.out.println(getInt(res).toString(radix));
             }
             case "load" -> {
                 if(cmds.length != 2)
                     System.err.println("Usage: \\load <packageName>, i.e. \\load physics");
-                else FormulaPackage.load(cmds[1]).addTo(calculator.lookup);
+                else FormulaPackage.load(cmds[1]).addTo(lookup);
             }
             case "help" -> System.out.println("""
                     Enter a math expression to be evaluated. Supported features:

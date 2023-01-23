@@ -14,14 +14,22 @@ final class Builder implements Expression {
 
     private final List<Expression> elements = new ArrayList<>();
 
+    Builder() { }
+
     Builder(Expression first, Expression second) {
         elements.add(first);
         elements.add(second);
     }
 
-//    static Expression startList(Stack<? extends Expression> stack) {
-//        return new Builder(
-//    }
+    @Override
+    public String toString() {
+        String str = elements.toString();
+        return "Builder: " + str.substring(0, str.length()-1);
+    }
+
+    static Expression createEmpty(Stack<? extends Expression> stack) {
+        return new Builder();
+    }
 
     static Expression append(Stack<? extends Expression> stack) {
         Expression element = stack.pop();
@@ -30,17 +38,36 @@ final class Builder implements Expression {
             b.append(element);
             return b;
         }
-        return new Builder(elements, element);
+        throw new AssertionError();
+//        return new Builder(elements, element);
     }
 
     static Expression buildList(Stack<? extends Expression> stack) {
         Expression x = stack.pop();
-        return x instanceof Builder b ? b.buildList() : x;
+        if(x instanceof Builder b) {
+            if(!b.elements.isEmpty())
+                throw new IllegalArgumentException("Trailing comma in list");
+            return Numbers.EMPTY;
+        }
+        Expression bx = stack.pop();
+        if(!(bx instanceof Builder b))
+            throw new AssertionError();
+        b.append(x);
+        return b.buildList();
     }
 
     static Expression buildVector(Stack<? extends Expression> stack) {
         Expression x = stack.pop();
-        return x instanceof Builder b ? b.buildVector() : x;
+        if(x instanceof Builder b) {
+            if(!b.elements.isEmpty())
+                throw new IllegalArgumentException("Trailing comma in vector");
+            throw new IllegalArgumentException("Vector requires at least one component");
+        }
+        Expression bx = stack.pop();
+        if(!(bx instanceof Builder b))
+            throw new AssertionError();
+        b.append(x);
+        return b.buildVector();
     }
 
     void append(Expression x) {

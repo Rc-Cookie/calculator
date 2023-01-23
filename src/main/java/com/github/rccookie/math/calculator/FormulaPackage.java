@@ -55,4 +55,3 @@ public interface FormulaPackage extends JsonSerializable {
         return Json.parse(in).as(FormulaPackage.class);
     }
 }
-

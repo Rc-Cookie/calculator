@@ -14,8 +14,8 @@ import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
 import com.github.rccookie.util.Console;
+import com.github.rccookie.util.Utils;
 
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -425,6 +425,8 @@ public interface Expression extends Number {
      */
     interface Numbers extends Expression, Iterable<Expression> {
 
+        Numbers EMPTY = new NumbersImpl();
+
         int size();
 
         @Override
@@ -564,8 +566,14 @@ public interface Expression extends Number {
         Expression expr();
 
         @Override
-        @Contract("_->this")
+//        @Contract("_->this")
         default Number evaluate(SymbolLookup lookup) {
+            if(paramCount() == 0) try {
+                return evaluate(lookup, Numbers.EMPTY);
+            } catch(IllegalArgumentException e) {
+                Console.debug("Failed to evaluate parameter-less function, returning function expression:");
+                Console.debug(Utils.getStackTraceString(e));
+            }
             return this;
         }
 
@@ -738,6 +746,10 @@ public interface Expression extends Number {
         default BinaryFunctionOperation greaterThanOrEqual(Number x) {
             return derive(">=", "$1 >= $2", x, Token.GREATER_OR_EQUAL.precedence(), Number::greaterThanOrEqual);
         }
+
+        static Function of(Number expr) {
+            return new RuntimeFunction(Expression.of(expr));
+        }
     }
 
     interface UnaryFunctionOperation extends Function, UnaryOperation { }
@@ -745,7 +757,7 @@ public interface Expression extends Number {
     interface BinaryFunctionOperation extends Function, BinaryOperation {
         @Override
         default Number evaluate(SymbolLookup lookup) {
-            return this;
+            return Function.super.evaluate(lookup);
         }
 
         @Override

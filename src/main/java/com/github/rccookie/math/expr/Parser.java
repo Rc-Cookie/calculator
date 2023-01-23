@@ -11,7 +11,8 @@ final class Parser {
             case Token.Symbol v -> v;
             case Token.Operator o -> o.apply(stack);
         });
-        if(stack.size() > 1) throw new AssertionError();
+        if(stack.size() > 1) //throw new AssertionError();
+            throw new IllegalArgumentException("Mismatched parenthesis / brackets");
         return Expression.of(stack.pop());
     }
 

@@ -10,9 +10,9 @@ import com.github.rccookie.math.Number;
 sealed interface Token {
 
     Operator COMMA             = Operator.noFunction(",", Precedence.COMMA, Builder::append);
-    Operator LEFT_PARENTHESIS  = Operator.tokenOnly("(", Precedence.LEFT_PARENTHESIS);
+    Operator LEFT_PARENTHESIS  = Operator.noFunction("(", Precedence.LEFT_PARENTHESIS, Builder::createEmpty);
     Operator RIGHT_PARENTHESIS = Operator.noFunction(")", Precedence.RIGHT_PARENTHESIS, Builder::buildList);
-    Operator LEFT_BRACKET      = Operator.tokenOnly("[", Precedence.LEFT_BRACKET);
+    Operator LEFT_BRACKET      = Operator.noFunction("[", Precedence.LEFT_BRACKET, Builder::createEmpty);
     Operator RIGHT_BRACKET     = Operator.noFunction("]", Precedence.RIGHT_BRACKET, Builder::buildVector);
 
     Operator PLUS      = new Operator("+", Precedence.PLUS, Expression::add);
@@ -88,8 +88,8 @@ sealed interface Token {
         }
 
         @Override
-        public Number evaluate(SymbolLookup c) {
-            return c.get(name);
+        public Number evaluate(SymbolLookup lookup) {
+            return Expression.evaluate(lookup.get(name), lookup);
         }
     }
 

@@ -23,6 +23,7 @@ record NumbersImpl(Expression... elements) implements Expression.Numbers {
 
     @Override
     public String toString() {
+        if(elements.length == 0) return "()";
         return Arrays.stream(elements).map(e -> e.toString(precedence(), false)).collect(Collectors.joining(", "));
     }
 

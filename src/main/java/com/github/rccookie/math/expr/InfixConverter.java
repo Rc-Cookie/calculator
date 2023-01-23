@@ -24,8 +24,8 @@ final class InfixConverter {
 //                throw new IllegalArgumentException("Mismatched parenthesis (missing right parenthesis)");
 //            if(t == Token.LEFT_BRACKET)
 //                throw new IllegalArgumentException("Mismatched bracket (missing right bracket)");
-            if(t != Token.LEFT_PARENTHESIS && t != Token.LEFT_BRACKET)
-                output.add(t);
+//            if(t != Token.LEFT_PARENTHESIS && t != Token.LEFT_BRACKET)
+            output.add(t);
         }
         return output;
     }
@@ -34,13 +34,20 @@ final class InfixConverter {
         switch(t) {
             case Token.Value v -> output.add(v);
             case Token.Operator o -> {
-                if(o == Token.LEFT_PARENTHESIS || o == Token.LEFT_BRACKET)
+                if(o == Token.COMMA) {
+                    while(!operators.isEmpty() && operators.peek().precedence() > Precedence.COMMA)
+                        output.add(operators.pop());
+                    output.add(Token.COMMA);
+                }
+                else if(o == Token.LEFT_PARENTHESIS || o == Token.LEFT_BRACKET) {
                     operators.push(o);
+                    output.add(o);
+                }
                 else if(o == Token.RIGHT_PARENTHESIS || o == Token.RIGHT_BRACKET) {
                     Token other = o == Token.RIGHT_BRACKET ? Token.LEFT_BRACKET : Token.LEFT_PARENTHESIS;
                     while(operators.isEmpty() || operators.peek() != other) {
                         if(operators.isEmpty())
-                            throw new IllegalArgumentException("Mismatched parenthesis / brackets");
+                            throw new IllegalArgumentException("Mismatched " + (o==Token.RIGHT_BRACKET?"bracket":"parenthesis"));
                         output.add(operators.pop());
                     }
                     output.add(o);
