@@ -14,8 +14,8 @@ import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
 import com.github.rccookie.util.Console;
-import com.github.rccookie.util.Utils;
 
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -566,14 +566,8 @@ public interface Expression extends Number {
         Expression expr();
 
         @Override
-//        @Contract("_->this")
+        @Contract("_->this")
         default Number evaluate(SymbolLookup lookup) {
-            if(paramCount() == 0) try {
-                return evaluate(lookup, Numbers.EMPTY);
-            } catch(MathEvaluationException|MathExpressionSyntaxException e) {
-                Console.debug("Failed to evaluate parameter-less function, returning function expression:");
-                Console.debug(Utils.getStackTraceString(e));
-            }
             return this;
         }
 

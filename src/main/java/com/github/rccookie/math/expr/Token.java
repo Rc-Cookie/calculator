@@ -89,7 +89,7 @@ sealed interface Token {
 
         @Override
         public Number evaluate(SymbolLookup lookup) {
-            return Expression.evaluate(lookup.get(name), lookup);
+            return lookup.get(name);
         }
     }
 

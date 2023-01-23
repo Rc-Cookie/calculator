@@ -1,12 +1,19 @@
 package com.github.rccookie.math.calculator;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
+import java.util.Set;
 
+import com.github.rccookie.json.Json;
+import com.github.rccookie.json.JsonDeserialization;
 import com.github.rccookie.json.JsonObject;
+import com.github.rccookie.json.JsonSerializable;
 import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
@@ -17,9 +24,11 @@ import com.github.rccookie.math.expr.Functions;
 import com.github.rccookie.math.expr.MathEvaluationException;
 import com.github.rccookie.math.expr.MathExpressionSyntaxException;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.util.Args;
 import com.github.rccookie.util.ArgsParser;
 import com.github.rccookie.util.Arguments;
 import com.github.rccookie.util.Console;
+import com.github.rccookie.util.UncheckedException;
 import com.github.rccookie.util.Utils;
 import com.github.rccookie.util.config.Config;
 
@@ -33,12 +42,14 @@ import org.jetbrains.annotations.Nullable;
  * <p>The calculator has an command line interface using the {@link #main(String[])}
  * function.</p>
  */
-public class Calculator {
+public class Calculator implements JsonSerializable {
 
     /**
      * Version of this calculator API.
      */
     public static final String VERSION = "2.7";
+
+    private static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
 
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
             "precision", 50,
@@ -111,8 +122,9 @@ public class Calculator {
 
     /**
      * Returns a mutable reference to the variables in the calculator. Some variable names
-     * are protected for modification. Subsequent changes to the variables in the calculator
-     * will be reflected in the returned lookup, and vice versa.
+     * are protected for modification and will cause a {@link MathEvaluationException} to
+     * be thrown when attempted to be modified. Subsequent changes to the variables in the
+     * calculator will be reflected in the returned lookup, and vice versa.
      *
      * @return The variables in this calculator
      */
@@ -167,6 +179,30 @@ public class Calculator {
         return ans;
     }
 
+    /**
+     * Loads the exact state (variables, history) of the specified calculator,
+     * discarding the current state of this calculator.
+     *
+     * @param calculator The calculator to copy
+     */
+    public void loadState(Calculator calculator) {
+        Arguments.checkNull(calculator, "calculator");
+
+        for(Map.Entry<String, Number> entry : Set.copyOf(lookup.entrySet())) {
+            if(entry.getKey().equals("exit") || entry.getKey().equals("scientific") ||
+               entry.getKey().equals("precision")|| DEFAULT_VARS.containsKey(entry.getKey()))
+                continue;
+            lookup.delete(entry.getKey());
+        }
+
+        calculator.lookup.entrySet().stream()
+                .filter(e -> !e.getKey().equals("exit") && !DEFAULT_VARS.containsKey(e.getKey()))
+                .forEach(e -> lookup.put(e.getKey(), e.getValue()));
+        lookup.setAns(calculator.lookup.get("ans"));
+        lastExpr = calculator.lastExpr;
+        moreCount = calculator.moreCount;
+    }
+
 
     /**
      * Entry point for the command line interface of the calculator.
@@ -177,38 +213,50 @@ public class Calculator {
     public static void main(String[] args) throws IOException {
         ArgsParser parser = new ArgsParser();
         parser.addDefaults();
-        parser.addOption('e', "expr", true, "Evaluate the specified expression and exit")
-                .action(expressions -> {
-                    Calculator calculator = new Calculator();
-                    calculator.evalInput(expressions);
-                    calculator.evalCommand("exit");
-                });
+        parser.addOption('l', "load", true, "Load a state saved using \\store");
         parser.setName("Java math interpreter - version " + VERSION + "\nBy RcCookie");
         parser.setDescription("""
 
                         Usage: math [--options] [expression]
                         Evaluate entered math expressions. Evaluate '\\help' to show expressions help.""");
 
-        String argsStr = parser.parse(args).getArgsString();
+        Args options = parser.parse(args);
+
+        if(System.getProperty("os.name").toLowerCase().contains("windows"))
+            checkReg();
+
+        Calculator calculator;
+        if(options.is("load"))
+            calculator = Json.load(new File(STATE_STORE_DIR, options.get("load") + ".json")).as(Calculator.class);
+        else calculator = new Calculator();
+
+        calculator.variables().put("exit", new Rational(0));
+        Rational.setToStringMode(Rational.ToStringMode.SMART_SCIENTIFIC);
+
+
+        String argsStr = options.getArgsString();
         if(!argsStr.isBlank()) {
-            Calculator calculator = new Calculator();
             calculator.evalInput(argsStr);
             calculator.evalCommand("exit");
         }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                Files.createDirectories(Path.of(STATE_STORE_DIR));
+                Json.store(calculator, new File(STATE_STORE_DIR, "_recent.json"));
+            } catch (IOException e) {
+                System.err.println("Failed to store calculator state for restoring");
+                if(Console.getFilter().isEnabled("debug"))
+                    Console.error(e);
+            }
+        }, "Calculate state store thread"));
 
         System.out.println("Java math interpreter - version " + VERSION + """
                             
                             By RcCookie
                             -----------------------------------""");
 
-        if(System.getProperty("os.name").toLowerCase().contains("windows"))
-            checkReg();
-
-        Calculator calculator = new Calculator();
-        calculator.variables().put("exit", new Rational(0));
-        Rational.setToStringMode(Rational.ToStringMode.SMART_SCIENTIFIC);
-
-        Config config = Config.fromAppdataPath("Calculator");
+        Config config = Config.fromAppdataPath("calculator");
         try {
             config.setDefaults(DEFAULT_SETTINGS);
             calculator.variables().put("precision", new Rational(config.getInt("precision")));
@@ -232,7 +280,7 @@ public class Calculator {
         }
     }
 
-    private void evalInput( String expressions) {
+    private void evalInput(String expressions) {
         if(expressions == null) {
             evalCommand("exit");
             return;
@@ -308,7 +356,7 @@ public class Calculator {
             case "vars" -> lookup.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(var -> {
                 if(var.getValue() instanceof Expression.Function f) {
                     System.out.print(var.getKey() + "(" + String.join(",", f.paramNames()) + ")");
-                    if(!DEFAULT_VARS.containsKey(var.getKey()))
+                    if(var.getKey().equals("ans") || !DEFAULT_VARS.containsKey(var.getKey()))
                         System.out.println(" := " + f.expr());
                     else System.out.println();
                 }
@@ -349,13 +397,45 @@ public class Calculator {
             case "del", "delete" -> {
                 if(cmds.length == 1)
                     throw new IllegalCommandException("Usage: \\" + cmds[0] + " <var [var2 var3...]>");
+                int startCount = lookup.entrySet().size();
                 for(int i=1; i<cmds.length; i++)
                     lookup.delete(cmds[i]);
+                int delCount = startCount - lookup.entrySet().size();
+                System.out.println("Deleted "+delCount+" variable"+(delCount==1?"":"s")+".");
             }
             case "load" -> {
                 if(cmds.length != 2)
                     throw new IllegalCommandException("Usage: \\load <packageName>, i.e. \\load physics");
-                FormulaPackage.load(cmds[1]).addTo(lookup);
+                FormulaPackage pkg = FormulaPackage.load(cmds[1]);
+                pkg.addTo(lookup);
+                System.out.println("Loaded " + pkg.size() + " variables.");
+            }
+            case "store" -> {
+                if(cmds.length != 2)
+                    throw new IllegalCommandException("Usage: \\store <state name>");
+                try {
+                    Files.createDirectories(Path.of(STATE_STORE_DIR));
+                } catch (IOException e) {
+                    throw new UncheckedException(e);
+                }
+                Json.store(this, new File(STATE_STORE_DIR, cmds[1] + ".json"));
+                System.out.println("Calculator state stored.");
+            }
+            case "restore" -> {
+                if(cmds.length == 1) try {
+                    loadState(Json.load(new File(STATE_STORE_DIR, "_recent.json")).as(Calculator.class));
+                    return;
+                } catch(Exception e) {
+                    throw new IllegalCommandException("No recent state to restore", e);
+                }
+                if(cmds.length != 2)
+                    throw new IllegalCommandException("Usage: \\restore <state name>");
+                try {
+                    loadState(Json.load(new File(STATE_STORE_DIR, cmds[1] + ".json")).as(Calculator.class));
+                } catch (Exception e) {
+                    throw new IllegalCommandException("Could not find state '"+cmds[1]+"'", e);
+                }
+                System.out.println("Calculator state restored.");
             }
             case "help" -> System.out.println("""
                     Enter a math expression to be evaluated. Supported features:
@@ -370,13 +450,15 @@ public class Calculator {
                      - First class functions: functions (particularly lambdas) may be passed to other functions
                      - Convert degrees to radians when writing ° symbol, i.e. 180° -> pi
                      - Convert percentage to normal number when writing % symbol, i.e. 10% -> 1/10
+                     - Delete variables using \\del / \\delete
                      - Load packages of constants and formulas using \\load <name>, i.e. \\load physics
                      - Force decimal or fraction rendering for the last result using \\dec / \\frac
                      - Output more decimal places from the last result using \\more
                      - Use the variable 'ans' to refer to the previous result, or operate as if it was at the front of the expression
                      - Set the variable 'precision' to set the approximate decimal number precision (>1, default is 100)
                      - Set the variable 'scientific' to something other than 0 to enable scientific notation output
-                     - Set the variable 'exit' to a desired value to set the exit code of the program, exit with \\exit""");
+                     - Set the variable 'exit' to a desired value to set the exit code of the program, exit with \\exit
+                     - Store and restore the calculator's state using \\store <state name> / \\restore <state name>""");
             default -> throw new IllegalCommandException("Unknown command: '\\" + cmd + "'");
         }
     }
@@ -415,6 +497,34 @@ public class Calculator {
         throw new MathExpressionSyntaxException("Cannot calculate radix rendering for non-integer");
     }
 
+    @Override
+    public Object toJson() {
+        JsonObject vars = new JsonObject();
+        lookup.entrySet().stream()
+                .filter(e -> !e.getKey().equals("ans") && !DEFAULT_VARS.containsKey(e.getKey()))
+                .forEach(e -> vars.put(e.getKey(), e.getValue()));
+        return new JsonObject(
+                "vars", vars,
+                "ans", lookup.get("ans"),
+                "lastExpr", lastExpr,
+                "moreCount", moreCount,
+                "version", VERSION
+        );
+    }
+
+    static {
+        JsonDeserialization.register(Calculator.class, json -> {
+            if(!VERSION.equals(json.get("version").orNull()))
+                Console.warn("Loading calculator with different version (current: {}, loading: {})",
+                        VERSION, json.get("version").or("Unspecified"));
+            Calculator calculator = new Calculator();
+            json.get("vars").forEach((n,v) -> calculator.lookup.put(n, v.as(Number.class)));
+            calculator.lookup.setAns(json.get("ans").as(Number.class));
+            calculator.lastExpr = json.get("lastExpr").asString();
+            calculator.moreCount = json.get("moreCount").asInt();
+            return calculator;
+        });
+    }
 
 
     private static class Lookup extends DefaultSymbolLookup {

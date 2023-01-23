@@ -30,6 +30,8 @@ public interface FormulaPackage extends JsonSerializable {
 
     void forEach(BiConsumer<? super String, ? super Number> action);
 
+    int size();
+
 
     default void addTo(SymbolLookup lookup) {
         forEach(lookup::put);
