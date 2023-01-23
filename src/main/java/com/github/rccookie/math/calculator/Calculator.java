@@ -261,6 +261,9 @@ public class Calculator implements JsonSerializable {
                 e.printStackTrace();
         }
 
+        // Remove unused restore state saves
+        calculator.getLatestRestoreStateAndClean();
+
         //noinspection InfiniteLoopStatement
         while(true) {
             System.out.print("> ");
@@ -344,6 +347,36 @@ public class Calculator implements JsonSerializable {
                 if(Console.getFilter().isEnabled("debug"))
                     Console.error(e);
             }
+        }
+    }
+
+    private Path getLatestRestoreStateAndClean() {
+        try {
+            Path latest = null;
+            Files.createDirectories(RECENT_STATE_DIR);
+            try (var s = Files.newDirectoryStream(Path.of(STATE_STORE_DIR, "_recent"), "*.json")) {
+                for (Path p : s) {
+                    String f = p.getFileName().toString();
+                    if(f.equals(PID + ".json")) continue; // Don't restore your own state
+                    // Is the process with that id still running and is probably
+                    // a calculator instance?
+                    long pid = Long.parseLong(f.substring(0, f.length() - 5));
+                    if(ProcessHandle.of(pid)
+                            .map(ph -> ph.info().command().orElse("math"))
+                            .map(n -> n.contains("math") || n.contains("java"))
+                            .orElse(false)) continue;
+
+                    if(latest == null) latest = p;
+                        // Delete all non-latest restore files, will never be chosen again
+                    else if(Files.getLastModifiedTime(latest).compareTo(Files.getLastModifiedTime(p)) < 0) {
+                        Files.delete(latest);
+                        latest = p;
+                    } else Files.delete(p);
+                }
+            }
+            return latest;
+        } catch(Exception e) {
+            throw new UncheckedException(e);
         }
     }
 
@@ -431,31 +464,7 @@ public class Calculator implements JsonSerializable {
             }
             case "restore" -> {
                 if(cmds.length == 1) try { // Restore from latest restore save
-
-                    // Find the latest restore state whose calculator is not running anymore
-                    Path latest = null;
-                    Files.createDirectories(RECENT_STATE_DIR);
-                    try(var s = Files.newDirectoryStream(Path.of(STATE_STORE_DIR, "_recent"), "*.json")) {
-                        for (Path p : s) {
-                            String f = p.getFileName().toString();
-                            if(f.equals(PID + ".json")) continue; // Don't restore your own state
-                            // Is the process with that id still running and is probably
-                            // a calculator instance?
-                            long pid = Long.parseLong(f.substring(0, f.length() - 5));
-                            if(ProcessHandle.of(pid)
-                                    .map(ph -> ph.info().command().orElse("math"))
-                                    .map(n -> n.contains("math") || n.contains("java"))
-                                    .orElse(false)) continue;
-
-                            if(latest == null) latest = p;
-                            // Delete all non-latest restore files, will never be chosen again
-                            else if(Files.getLastModifiedTime(latest).compareTo(Files.getLastModifiedTime(p)) < 0) {
-                                Files.delete(latest);
-                                latest = p;
-                            } else Files.delete(p);
-                        }
-                    }
-
+                    Path latest = getLatestRestoreStateAndClean();
                     if(latest == null) throw new IllegalCommandException("No recent state to restore");
                     loadState(Json.load(latest.toFile()).as(Calculator.class));
                     System.out.println("Last calculator state restored.");
