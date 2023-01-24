@@ -3,10 +3,10 @@ package com.github.rccookie.math.calculator;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,7 +49,7 @@ public class Calculator implements JsonSerializable {
      */
     public static final String VERSION = "2.7";
 
-    private static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
+    static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
     private static final Path RECENT_STATE_DIR = Path.of(STATE_STORE_DIR, "_recent");
 
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
@@ -60,7 +60,10 @@ public class Calculator implements JsonSerializable {
     private static final long PID = ProcessHandle.current().pid();
 
 
-    private static final Map<String, Number> DEFAULT_VARS = Utils.map(
+    /**
+     * Variables set by default in a calculator, that cannot be changed.
+     */
+    public static final Map<String, Number> DEFAULT_VARS = Map.copyOf(Utils.map(
             "pi", Number.PI(),
             "e", Number.E(),
             "i", Number.I(),
@@ -106,7 +109,7 @@ public class Calculator implements JsonSerializable {
             "der", Functions.DERIVATIVE,
             "antiDer", Functions.ANTIDERIVATIVE,
             "int", Functions.INTEGRATE
-    );
+    ));
     private static final Map<String, Number> OPTIONAL_DEFAULT_VARS = Utils.map(
             "precision", new Rational(Rational.getPrecision()),
             "scientific", switch(Rational.getToStringMode()) {
@@ -116,11 +119,37 @@ public class Calculator implements JsonSerializable {
             "k", new Rational(1000)
     );
 
+    /**
+     * Commands registered to a calculator by default. Can be overridden or removed!
+     */
+    public static final Map<String, Command> DEFAULT_COMMANDS;
+    static {
+        Map<String, Command> cmds = new LinkedHashMap<>();
+        cmds.put("exit", Commands.EXIT);
+        cmds.put("reset", Commands.RESET);
+        cmds.put("vars", Commands.VARS);
+        cmds.put("more", Commands.MORE);
+        cmds.put("frac", Commands.FRAC);
+        cmds.put("dec", Commands.DEC);
+        cmds.put("bin", Commands.BIN);
+        cmds.put("hex", Commands.HEX);
+        cmds.put("radix", Commands.RADIX);
+        cmds.put("del", Commands.DELETE);
+        cmds.put("delete", Commands.DELETE);
+        cmds.put("load", Commands.LOAD);
+        cmds.put("store", Commands.STORE);
+        cmds.put("restore", Commands.RESTORE);
+        DEFAULT_COMMANDS = Utils.view(cmds);
+    }
+
     private static final char ABOUT_EQUAL = Charset.defaultCharset().newEncoder().canEncode('\u2248') ? '\u2248' : '~';
 
     private final Lookup lookup = new Lookup();
     private String lastExpr = "ans";
-    private int moreCount = 0;
+    int moreCount = 0;
+
+
+    private final Map<String, Command> commands = new LinkedHashMap<>(DEFAULT_COMMANDS);
 
 
     /**
@@ -134,6 +163,39 @@ public class Calculator implements JsonSerializable {
     public SymbolLookup variables() {
         return lookup;
     }
+
+
+    /**
+     * Registers the specified command under the given name. If there was a different command
+     * registered for that name, it will be replaced.
+     *
+     * @param name Name of the command (case-insensitive)
+     * @param command The command to be registered
+     */
+    public void registerCommand(String name, Command command) {
+        commands.put(Arguments.checkNull(name, "name").toLowerCase(), Arguments.checkNull(command, "command"));
+    }
+
+    /**
+     * Removes the command registered for the specified name, if any.
+     *
+     * @param name Name of the command (case-insensitive)
+     * @return Whether a command was previously registered for that name
+     */
+    public boolean removeCommand(String name) {
+        return commands.remove(Arguments.checkNull(name, "name").toLowerCase()) != null;
+    }
+
+    /**
+     * Returns a view of all commands registered in this calculator. All names
+     * are in lower case.
+     *
+     * @return A view of the commands in this calculator
+     */
+    public Map<String, Command> commands() {
+        return Utils.view(commands);
+    }
+
 
 
     /**
@@ -208,6 +270,77 @@ public class Calculator implements JsonSerializable {
 
 
     /**
+     * Evaluates the specified input, expressions or commands separated
+     * by semicolons, and prints the result into the standard output
+     * stream. A value of <code>null</code> will invoke the exit command.
+     *
+     * @param expressions The expressions to evaluate
+     */
+    public void evalInput(String expressions) {
+        if(expressions == null) {
+            evalCommand("exit");
+            return;
+        }
+        for(String expr : expressions.split(";")) try {
+            if(expr.startsWith("\\"))
+                evalCommand(expr.substring(1));
+            else {
+                moreCount = 0;
+                Number res = evaluateSmart(expr);
+                printRes(res, null);
+            }
+        } catch(MathExpressionSyntaxException e) {
+            System.err.println("Illegal expression: " + e.getMessage());
+            if(Console.getFilter().isEnabled("debug"))
+                e.printStackTrace();
+        } catch(MathEvaluationException e) {
+            System.err.println(e.getMessage());
+            if(Console.getFilter().isEnabled("debug"))
+                e.printStackTrace();
+        } catch (Throwable t) {
+            String msg = t.getMessage();
+            System.err.println(msg != null ? msg : "Internal error");
+            if(Console.getFilter().isEnabled("debug"))
+                t.printStackTrace();
+        }
+    }
+
+
+    public void evalCommand(String cmd) {
+        Console.mapDebug("Received command", cmd);
+        String[] cmds = cmd.split("\s+");
+        cmds[0] = cmds[0].toLowerCase();
+
+        if(cmds[0].equals("help")) {
+            System.out.println("""
+                    Enter a math expression to be evaluated. Supported features:
+                     - Basic arithmetics (+-*/^!)
+                     - Implicit multiplication (omit multiplication sign, i.e. 2(3+4) = 2\u00B7(3+4)
+                     - Comparisons (< <= = >= >) returning 0 or 1
+                     - Vectors: Declare with brackets, split arguments with commas, i.e. [1,2,3]
+                     - Function calls as usual, i.e. f(2). List default functions using \\vars
+                     - Variable declarations: declare using :=, i.e. x := 42
+                     - Function declarations: declare using :=, i.e. f(x) := 2x
+                     - Anonymous function declarations aka lambdas: declare using ->, i.e. f := x -> 2x
+                     - First class functions: functions (particularly lambdas) may be passed to other functions
+                     - Convert degrees to radians when writing ° symbol, i.e. 180° -> pi
+                     - Convert percentage to normal number when writing % symbol, i.e. 10% -> 1/10
+                     - Use the variable 'ans' to refer to the previous result, or operate as if it was at the front of the expression
+                     - Set the variable 'precision' to set the approximate decimal number precision (>1, default is 100)
+                     - Set the variable 'scientific' to something other than 0 to enable scientific notation output
+                     - Use commands:""");
+            commands.forEach((n,c) -> System.out.println("   \\" + n + ": " + c.getDescription()));
+        }
+        else {
+            Command command = commands.get(cmds[0]);
+            if(command == null)
+                throw new IllegalCommandException("Unknown command: "+cmds[0]);
+            else command.invoke(this, cmds);
+        }
+    }
+
+
+    /**
      * Entry point for the command line interface of the calculator.
      *
      * @param args Command line args, run --help for more detail
@@ -278,36 +411,13 @@ public class Calculator implements JsonSerializable {
         }
     }
 
-    private void evalInput(String expressions) {
-        if(expressions == null) {
-            evalCommand("exit");
-            return;
-        }
-        for(String expr : expressions.split(";")) try {
-            if(expr.startsWith("\\"))
-                evalCommand(expr.substring(1));
-            else {
-                moreCount = 0;
-                Number res = evaluateSmart(expr);
-                printRes(res, null);
-            }
-        } catch(MathExpressionSyntaxException e) {
-            System.err.println("Illegal expression: " + e.getMessage());
-            if(Console.getFilter().isEnabled("debug"))
-                e.printStackTrace();
-        } catch(MathEvaluationException e) {
-            System.err.println(e.getMessage());
-            if(Console.getFilter().isEnabled("debug"))
-                e.printStackTrace();
-        } catch (Throwable t) {
-            String msg = t.getMessage();
-            System.err.println(msg != null ? msg : "Internal error");
-            if(Console.getFilter().isEnabled("debug"))
-                t.printStackTrace();
-        }
-    }
-
-    private void printRes(Number res, Rational.ToStringMode mode) {
+    /**
+     * Prints a number formatted as result into the standard output stream.
+     *
+     * @param res The number to display
+     * @param mode A display mode override, or <code>null</code> to use the default
+     */
+    protected void printRes(Number res, Rational.ToStringMode mode) {
         while(res instanceof Expression.Function f && f.paramCount() == 0)try {
             Number val = f.evaluate(lookup, Expression.Numbers.EMPTY);
             if(res.equals(val)) break;
@@ -350,7 +460,7 @@ public class Calculator implements JsonSerializable {
         }
     }
 
-    private Path getLatestRestoreStateAndClean() {
+    Path getLatestRestoreStateAndClean() {
         try {
             Path latest = null;
             Files.createDirectories(RECENT_STATE_DIR);
@@ -380,133 +490,6 @@ public class Calculator implements JsonSerializable {
         }
     }
 
-    private void evalCommand(String cmd) {
-        Console.mapDebug("Received command", cmd);
-        String[] cmds = cmd.split("\s+");
-        cmds[0] = cmds[0].toLowerCase();
-        switch(cmds[0]) {
-            case "exit" -> {
-                try {
-                    System.exit((int) lookup.get("exit").toDouble(lookup));
-                } catch(Exception e) {
-                    if(Console.getFilter().isEnabled("debug"))
-                        e.printStackTrace();
-                    System.exit(-1);
-                }
-            }
-            case "vars" -> lookup.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(var -> {
-                if(var.getValue() instanceof Expression.Function f) {
-                    System.out.print(var.getKey() + "(" + String.join(",", f.paramNames()) + ")");
-                    if(var.getKey().equals("ans") || !DEFAULT_VARS.containsKey(var.getKey()))
-                        System.out.println(" := " + f.expr());
-                    else System.out.println();
-                }
-                else System.out.println(var.getKey() + " := " + var.getValue());
-            });
-            case "more" -> {
-                if(moreCount < 10)
-                    moreCount++;
-                Number res = lookup.get("ans");
-                int precision = Rational.getPrecision();
-                Rational.setPrecision(precision << moreCount);
-                printRes(res, null);
-                Rational.setPrecision(precision);
-            }
-            case "frac" -> {
-                Number res = lookup.get("ans");
-                printRes(res, Rational.ToStringMode.FORCE_FRACTION);
-            }
-            case "dec" -> {
-                Number res = lookup.get("ans");
-                printRes(res, Rational.ToStringMode.FORCE_DECIMAL);
-            }
-            case "bin" -> {
-                Number res = lookup.get("ans");
-                System.out.println(getInt(res).toString(2));
-            }
-            case "hex" -> {
-                Number res = lookup.get("ans");
-                System.out.println(getInt(res).toString(16));
-            }
-            case "radix" -> {
-                if(cmds.length != 2)
-                    throw new IllegalCommandException("Usage: \\radix <radix>");
-                Number res = lookup.get("ans");
-                int radix = Integer.parseInt(cmds[1]);
-                System.out.println(getInt(res).toString(radix));
-            }
-            case "del", "delete" -> {
-                if(cmds.length == 1)
-                    throw new IllegalCommandException("Usage: \\" + cmds[0] + " <var [var2 var3...]>");
-                int startCount = lookup.entrySet().size();
-                for(int i=1; i<cmds.length; i++)
-                    lookup.delete(cmds[i]);
-                int delCount = startCount - lookup.entrySet().size();
-                System.out.println("Deleted "+delCount+" variable"+(delCount==1?"":"s")+".");
-            }
-            case "load" -> {
-                if(cmds.length != 2)
-                    throw new IllegalCommandException("Usage: \\load <packageName>, i.e. \\load physics");
-                FormulaPackage pkg = FormulaPackage.load(cmds[1]);
-                pkg.addTo(lookup);
-                System.out.println("Loaded " + pkg.size() + " variables.");
-            }
-            case "store" -> {
-                if(cmds.length != 2)
-                    throw new IllegalCommandException("Usage: \\store <state name>");
-                try {
-                    Files.createDirectories(Path.of(STATE_STORE_DIR));
-                } catch (IOException e) {
-                    throw new UncheckedException(e);
-                }
-                Json.store(this, new File(STATE_STORE_DIR, cmds[1] + ".json"));
-                System.out.println("Calculator state stored.");
-            }
-            case "restore" -> {
-                if(cmds.length == 1) try { // Restore from latest restore save
-                    Path latest = getLatestRestoreStateAndClean();
-                    if(latest == null) throw new IllegalCommandException("No recent state to restore");
-                    loadState(Json.load(latest.toFile()).as(Calculator.class));
-                    System.out.println("Last calculator state restored.");
-                    return;
-                } catch(Exception e) {
-                    throw new IllegalCommandException("No recent state to restore", e);
-                }
-                if(cmds.length != 2)
-                    throw new IllegalCommandException("Usage: \\restore <state name>");
-                try {
-                    loadState(Json.load(new File(STATE_STORE_DIR, cmds[1] + ".json")).as(Calculator.class));
-                } catch (Exception e) {
-                    throw new IllegalCommandException("Could not find state '"+cmds[1]+"'", e);
-                }
-                System.out.println("Calculator state restored.");
-            }
-            case "help" -> System.out.println("""
-                    Enter a math expression to be evaluated. Supported features:
-                     - Basic arithmetics (+-*/^!)
-                     - Implicit multiplication (omit multiplication sign, i.e. 2(3+4) = 2\u00B7(3+4)
-                     - Comparisons (< <= = >= >) returning 0 or 1
-                     - Vectors: Declare with brackets, split arguments with commas, i.e. [1,2,3]
-                     - Function calls as usual, i.e. f(2). List default functions using \\vars
-                     - Variable declarations: declare using :=, i.e. x := 42
-                     - Function declarations: declare using :=, i.e. f(x) := 2x
-                     - Anonymous function declarations aka lambdas: declare using ->, i.e. f := x -> 2x
-                     - First class functions: functions (particularly lambdas) may be passed to other functions
-                     - Convert degrees to radians when writing ° symbol, i.e. 180° -> pi
-                     - Convert percentage to normal number when writing % symbol, i.e. 10% -> 1/10
-                     - Delete variables using \\del / \\delete
-                     - Load packages of constants and formulas using \\load <name>, i.e. \\load physics
-                     - Force decimal or fraction rendering for the last result using \\dec / \\frac
-                     - Output more decimal places from the last result using \\more
-                     - Use the variable 'ans' to refer to the previous result, or operate as if it was at the front of the expression
-                     - Set the variable 'precision' to set the approximate decimal number precision (>1, default is 100)
-                     - Set the variable 'scientific' to something other than 0 to enable scientific notation output
-                     - Set the variable 'exit' to a desired value to set the exit code of the program, exit with \\exit
-                     - Store and restore the calculator's state using \\store <state name> / \\restore <state name>""");
-            default -> throw new IllegalCommandException("Unknown command: '\\" + cmd + "'");
-        }
-    }
-
     private static void checkReg() {
         try {
             Process p = Runtime.getRuntime().exec(new String[]{ "reg", "query", "HKCU\\SOFTWARE\\Microsoft\\Command Processor", "/v", "AutoRun" });
@@ -531,14 +514,6 @@ public class Calculator implements JsonSerializable {
             if(Console.getFilter().isEnabled("debug"))
                 e.printStackTrace();
         }
-    }
-
-    private static BigInteger getInt(Number n) {
-        if(n instanceof Rational r && r.d.equals(BigInteger.ONE))
-            return r.n;
-        if(n instanceof Complex c && c.isReal() && c.re instanceof Rational r && r.d.equals(BigInteger.ONE))
-            return r.n;
-        throw new MathExpressionSyntaxException("Cannot calculate radix rendering for non-integer");
     }
 
     @Override
