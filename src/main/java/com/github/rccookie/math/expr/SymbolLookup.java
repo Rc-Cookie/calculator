@@ -36,6 +36,12 @@ public interface SymbolLookup {
         public Number get(String name) {
             throw new MathEvaluationException("Unknown variable: " + name);
         }
+
+        @Override
+        public boolean contains(String name) {
+            return false;
+        }
+
         @Override
         public void put(String name, Number value) {
             Arguments.checkNull(name, "name");
@@ -49,6 +55,8 @@ public interface SymbolLookup {
 
 
     Number get(String name);
+
+    boolean contains(String name);
 
     void put(String name, @Nullable Number value);
 

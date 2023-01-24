@@ -29,6 +29,11 @@ public class DefaultSymbolLookup implements SymbolLookup {
     }
 
     @Override
+    public boolean contains(String name) {
+        return variables.containsKey(name) || localVariables.containsKey(name);
+    }
+
+    @Override
     public void pushLocal(String name, Number var) {
         localVariables.computeIfAbsent(name, n -> new Stack<>()).push(var);
     }

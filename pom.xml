@@ -6,7 +6,7 @@
 
   <groupId>com.github.rccookie</groupId>
   <artifactId>math</artifactId>
-  <version>2.7.0</version>
+  <version>2.8.0</version>
 
   <properties>
     <maven.compiler.source>18</maven.compiler.source>
@@ -26,6 +26,11 @@
       <groupId>com.github.rccookie</groupId>
       <artifactId>util</artifactId>
       <version>1.13.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.rccookie</groupId>
+      <artifactId>http</artifactId>
+      <version>0.0.3</version>
     </dependency>
   </dependencies>
 
@@ -104,4 +109,12 @@
 <!--      </plugin>-->
     </plugins>
   </build>
+
+  <distributionManagement>
+    <repository>
+      <id>GitHub</id>
+      <name>GitHub Rc-Cookie Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/Rc-Cookie/calculator</url>
+    </repository>
+  </distributionManagement>
 </project>

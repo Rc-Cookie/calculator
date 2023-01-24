@@ -10,9 +10,11 @@ import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.expr.Expression;
+import com.github.rccookie.math.expr.MathEvaluationException;
 import com.github.rccookie.math.expr.MathExpressionSyntaxException;
 import com.github.rccookie.util.Arguments;
 import com.github.rccookie.util.Console;
+import com.github.rccookie.util.Utils;
 
 /**
  * A collection of commands for a calculator.
@@ -25,6 +27,8 @@ public final class Commands {
     public static final Command EXIT = new LambdaCommand(
             "Exit the calculator with the exit code of the 'exit' variable",
             (c,args) -> {
+                if(!c.variables().contains("exit"))
+                    System.exit(0);
                 try {
                     System.exit((int) c.variables().get("exit").toDouble(c.variables()));
                 } catch (Exception e) {
@@ -40,6 +44,39 @@ public final class Commands {
     public static final Command RESET = new LambdaCommand(
             "Reset the calculator's state",
             (c,args) -> c.loadState(new Calculator())
+    );
+    public static final Command PRECISION = new LambdaCommand(
+            "Show or set the precision of the calculator",
+            (c,args) -> {
+                if(args.length == 1)
+                    System.out.println(c.getPrecision());
+                else if(args.length != 2)
+                    throw new IllegalCommandException("Usage: \\"+args[0]+" <precision?>");
+                else {
+                    c.setPrecision(Integer.parseInt(args[1]));
+                    System.out.println("Precision set.");
+                }
+            }
+    );
+    public static final Command SCIENTIFIC = new LambdaCommand(
+            "Show or set whether to use scientific notation",
+            (c,args) -> {
+                if(args.length == 1)
+                    System.out.println(c.isScientificNotation() ? "1" : "0");
+                else if(args.length != 2)
+                    throw new IllegalCommandException("Usage: \\"+args[0]+" <true/false/1/0?>");
+                else {
+                    boolean scientific;
+                    args[1] = args[1].toLowerCase();
+                    if(args[1].equals("0") || args[1].equals("false"))
+                        scientific = false;
+                    else if(args[1].equals("1") || args[1].equals("true"))
+                        scientific = true;
+                    else throw new IllegalCommandException("Usage: \\"+args[0]+" <true/false/1/0?>");
+                    c.setScientificNotation(scientific);
+                    System.out.println("Scientific notation "+(scientific?"enabled.":"disabled."));
+                }
+            }
     );
     /**
      * Lists all variables and functions currently set in the calculator, including
@@ -100,7 +137,7 @@ public final class Commands {
             "Display the last (integer) result as binary",
             (c,args) -> {
                 Number res = c.variables().get("ans");
-                System.out.println(getInt(res).toString(2));
+                System.out.println(getInt(c, res).toString(2));
             }
     );
     /**
@@ -111,7 +148,7 @@ public final class Commands {
             "Display the last (integer) result as hexadecimal",
             (c,args) -> {
                 Number res = c.variables().get("ans");
-                System.out.println(getInt(res).toString(16));
+                System.out.println(getInt(c, res).toString(16));
             }
     );
     /**
@@ -125,7 +162,7 @@ public final class Commands {
                     throw new IllegalCommandException("Usage: \\"+args[0]+" <radix>");
                 Number res = c.variables().get("ans");
                 int radix = Integer.parseInt(args[1]);
-                System.out.println(getInt(res).toString(radix));
+                System.out.println(getInt(c, res).toString(radix));
             }
     );
     /**
@@ -205,7 +242,13 @@ public final class Commands {
 
 
 
-    private static BigInteger getInt(Number n) {
+    private static BigInteger getInt(Calculator calculator, Number n) {
+        if(n instanceof Expression.Function f && f.paramCount() == 0) try {
+            n = f.evaluate(calculator.variables(), Expression.Numbers.EMPTY);
+        } catch(MathEvaluationException|MathExpressionSyntaxException e) {
+            Console.debug("Failed to evaluate zero-parameter function");
+            Console.debug(Utils.getStackTraceString(e));
+        }
         if(n instanceof Rational r && r.d.equals(BigInteger.ONE))
             return r.n;
         if(n instanceof Complex c && c.isReal() && c.re instanceof Rational r && r.d.equals(BigInteger.ONE))
@@ -215,11 +258,11 @@ public final class Commands {
 
 
 
-    private static final class LambdaCommand extends Command {
+    static final class LambdaCommand extends Command {
 
         private final CommandLambda command;
 
-        private LambdaCommand(String description, CommandLambda command) {
+        LambdaCommand(String description, CommandLambda command) {
             super(description);
             this.command = Arguments.checkNull(command, "command");
         }
@@ -231,7 +274,7 @@ public final class Commands {
     }
 
     @FunctionalInterface
-    private interface CommandLambda {
+    interface CommandLambda {
         void invoke(Calculator calculator, String[] args) throws IllegalCommandException;
     }
 }

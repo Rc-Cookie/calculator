@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import com.github.rccookie.json.Json;
 import com.github.rccookie.json.JsonDeserialization;
@@ -47,14 +48,15 @@ public class Calculator implements JsonSerializable {
     /**
      * Version of this calculator API.
      */
-    public static final String VERSION = "2.7";
+    public static final String VERSION = "2.8";
 
     static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
     private static final Path RECENT_STATE_DIR = Path.of(STATE_STORE_DIR, "_recent");
 
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
             "precision", 50,
-            "scientific", false
+            "scientific", true,
+            "autoUpdate", true
     );
 
     private static final long PID = ProcessHandle.current().pid();
@@ -127,6 +129,8 @@ public class Calculator implements JsonSerializable {
         Map<String, Command> cmds = new LinkedHashMap<>();
         cmds.put("exit", Commands.EXIT);
         cmds.put("reset", Commands.RESET);
+        cmds.put("precision", Commands.PRECISION);
+        cmds.put("scientific", Commands.SCIENTIFIC);
         cmds.put("vars", Commands.VARS);
         cmds.put("more", Commands.MORE);
         cmds.put("frac", Commands.FRAC);
@@ -146,6 +150,8 @@ public class Calculator implements JsonSerializable {
 
     private final Lookup lookup = new Lookup();
     private String lastExpr = "ans";
+    private int precision = 50;
+    private boolean scientificNotation = true;
     int moreCount = 0;
 
 
@@ -173,7 +179,8 @@ public class Calculator implements JsonSerializable {
      * @param command The command to be registered
      */
     public void registerCommand(String name, Command command) {
-        commands.put(Arguments.checkNull(name, "name").toLowerCase(), Arguments.checkNull(command, "command"));
+        commands.put(Arguments.checkNull(name, "name").toLowerCase(),
+                     Arguments.checkNull(command, "command"));
     }
 
     /**
@@ -196,6 +203,42 @@ public class Calculator implements JsonSerializable {
         return Utils.view(commands);
     }
 
+
+    /**
+     * Returns whether the calculator displays in scientific notation.
+     *
+     * @return Whether the calculator displays in scientific notation
+     */
+    public boolean isScientificNotation() {
+        return scientificNotation;
+    }
+
+    /**
+     * Sets whether the calculator should display in scientific notation.
+     *
+     * @param scientificNotation Whether to use scientific notation
+     */
+    public void setScientificNotation(boolean scientificNotation) {
+        this.scientificNotation = scientificNotation;
+    }
+
+    /**
+     * Returns the precision setting of this calculator.
+     *
+     * @return The calculators precision
+     */
+    public int getPrecision() {
+        return precision;
+    }
+
+    /**
+     * Sets the precision of the calculator.
+     *
+     * @param precision The precision to use, >= 2
+     */
+    public void setPrecision(int precision) {
+        this.precision = Arguments.checkRange(precision, 2, null);
+    }
 
 
     /**
@@ -230,18 +273,20 @@ public class Calculator implements JsonSerializable {
      * @return The value of the expression
      */
     public Number evaluate(String expression) throws MathExpressionSyntaxException, MathEvaluationException {
-        Expression expr = Expression.parse(expression);
-        Console.debug("Expression:");
-        Console.debug(expr);
-        Console.debug(expr.toTreeString());
-        Number ans = expr.evaluate(lookup);
-        if(ans instanceof Expression e)
-            ans = e.simplify();
-        Console.debug("Result:");
-        Console.debug(Expression.of(ans).toTreeString());
-        lastExpr = expression;
-        lookup.setAns(ans);
-        return ans;
+        return runWithSettings(() -> {
+            Expression expr = Expression.parse(expression);
+            Console.debug("Expression:");
+            Console.debug(expr);
+            Console.debug(expr.toTreeString());
+            Number ans = expr.evaluate(lookup);
+            if(ans instanceof Expression e)
+                ans = e.simplify();
+            Console.debug("Result:");
+            Console.debug(Expression.of(ans).toTreeString());
+            lastExpr = expression;
+            lookup.setAns(ans);
+            return ans;
+        });
     }
 
     /**
@@ -265,6 +310,8 @@ public class Calculator implements JsonSerializable {
                 .forEach(e -> lookup.put(e.getKey(), e.getValue()));
         lookup.setAns(calculator.lookup.get("ans"));
         lastExpr = calculator.lastExpr;
+        setPrecision(calculator.getPrecision());
+        setScientificNotation(calculator.isScientificNotation());
         moreCount = calculator.moreCount;
     }
 
@@ -293,7 +340,7 @@ public class Calculator implements JsonSerializable {
             System.err.println("Illegal expression: " + e.getMessage());
             if(Console.getFilter().isEnabled("debug"))
                 e.printStackTrace();
-        } catch(MathEvaluationException e) {
+        } catch(MathEvaluationException|IllegalCommandException e) {
             System.err.println(e.getMessage());
             if(Console.getFilter().isEnabled("debug"))
                 e.printStackTrace();
@@ -333,11 +380,36 @@ public class Calculator implements JsonSerializable {
         }
         else {
             Command command = commands.get(cmds[0]);
-            if(command == null)
-                throw new IllegalCommandException("Unknown command: "+cmds[0]);
-            else command.invoke(this, cmds);
+            if(command != null)
+                runWithSettings(() -> command.invoke(this, cmds));
+            else throw new IllegalCommandException("Unknown command: "+cmds[0]);
         }
     }
+
+
+    private void runWithSettings(Runnable code) {
+        runWithSettings(() -> { code.run(); return null; });
+    }
+    private <T> T runWithSettings(Supplier<T> code) {
+        int precision = Rational.getPrecision();
+        Rational.ToStringMode toStringMode = Rational.getToStringMode();
+
+        Rational.setPrecision(this.precision);
+        Rational.setToStringMode(switch(Rational.getToStringMode()) {
+            case SMART, SMART_SCIENTIFIC -> scientificNotation ? Rational.ToStringMode.SMART_SCIENTIFIC : Rational.ToStringMode.SMART;
+            case DECIMAL_IF_POSSIBLE, DECIMAL_IF_POSSIBLE_SCIENTIFIC -> scientificNotation ? Rational.ToStringMode.DECIMAL_IF_POSSIBLE_SCIENTIFIC : Rational.ToStringMode.DECIMAL_IF_POSSIBLE;
+            case FORCE_FRACTION, FORCE_FRACTION_SCIENTIFIC -> scientificNotation ? Rational.ToStringMode.FORCE_FRACTION_SCIENTIFIC : Rational.ToStringMode.FORCE_FRACTION;
+            case FORCE_DECIMAL, FORCE_DECIMAL_SCIENTIFIC -> scientificNotation ? Rational.ToStringMode.FORCE_DECIMAL_SCIENTIFIC : Rational.ToStringMode.FORCE_DECIMAL;
+        });
+
+        try {
+            return code.get();
+        } finally {
+            Rational.setPrecision(precision);
+            Rational.setToStringMode(toStringMode);
+        }
+    }
+
 
 
     /**
@@ -349,7 +421,7 @@ public class Calculator implements JsonSerializable {
     public static void main(String[] args) throws IOException {
         ArgsParser parser = new ArgsParser();
         parser.addDefaults();
-        parser.addOption('l', "load", true, "Load a state saved using \\store");
+        parser.addOption('r', "restore", null, "Restore the last state or a state saved using \\store");
         parser.setName("Java math interpreter - version " + VERSION + "\nBy RcCookie");
         parser.setDescription("""
 
@@ -361,10 +433,10 @@ public class Calculator implements JsonSerializable {
         if(System.getProperty("os.name").toLowerCase().contains("windows"))
             checkReg();
 
-        Calculator calculator;
-        if(options.is("load"))
-            calculator = Json.load(new File(STATE_STORE_DIR, options.get("load") + ".json")).as(Calculator.class);
-        else calculator = new Calculator();
+        Calculator calculator = new Calculator();
+        if(options.is("restore"))
+            Commands.RESTORE.invoke(calculator,options.get("restore").equals("true") ?
+                    new String[] { "restore" } : new String[] { "restore", options.get("restore") });
 
         calculator.variables().put("exit", new Rational(0));
         Rational.setToStringMode(Rational.ToStringMode.SMART_SCIENTIFIC);
@@ -383,11 +455,55 @@ public class Calculator implements JsonSerializable {
                             By RcCookie
                             -----------------------------------""");
 
-        Config config = Config.fromAppdataPath("calculator");
         try {
+            Config config = Config.fromAppdataPath("calculator");
             config.setDefaults(DEFAULT_SETTINGS);
-            calculator.variables().put("precision", new Rational(config.getInt("precision")));
-            calculator.variables().put("scientific", config.getBool("scientific") ? Number.ONE() : Number.ZERO());
+
+            Calculator actual = new Calculator() {
+                @Override
+                public void setPrecision(int precision) {
+                    super.setPrecision(precision);
+                    config.set("precision", precision);
+                }
+
+                @Override
+                public void setScientificNotation(boolean scientificNotation) {
+                    super.setScientificNotation(scientificNotation);
+                    config.set("scientific", scientificNotation);
+                }
+            };
+
+            calculator.setPrecision(config.getInt("precision"));
+            calculator.setScientificNotation(config.getBool("scientific"));
+            actual.loadState(calculator);
+            calculator = actual;
+
+            if(config.getBool("autoUpdate"))
+                CalculatorUpdateChecker.update(2000, true);
+
+            calculator.registerCommand("autoUpdate", new Commands.LambdaCommand(
+                    "Test or set whether to automatically check for updates",
+                    (c,cmds) -> {
+                        if(cmds.length == 1)
+                            System.out.println("Automatic update checks are " +
+                                               (config.getBool("autoUpdate") ? "enabled." : "disabled."));
+                        else if(cmds.length != 2)
+                            throw new IllegalCommandException("Usage: \\"+cmds[0]+" <true/false/1/0?>");
+                        else {
+                            boolean autoUpdate;
+                            cmds[1] = cmds[1].toLowerCase();
+                            if(cmds[1].equals("0") || cmds[1].equals("false"))
+                                autoUpdate = false;
+                            else if(cmds[1].equals("1") || cmds[1].equals("true"))
+                                autoUpdate = true;
+                            else throw new IllegalCommandException("Usage: \\"+cmds[0]+" <true/false/1/0?>");
+                            config.set("autoUpdate", autoUpdate);
+                            System.out.println("Automatic update checks "+(autoUpdate?"enabled.":"disabled."));
+                        }
+                    }
+            ));
+            calculator.registerCommand("update", new Commands.LambdaCommand(
+                    "Check for updates", (c,cmds) -> CalculatorUpdateChecker.update(5000, false)));
         } catch(Exception e) {
             System.err.println("Failed to load settings");
             if(Console.getFilter().isEnabled("debug"))
@@ -402,12 +518,6 @@ public class Calculator implements JsonSerializable {
             System.out.print("> ");
             calculator.evalInput(Console.in.readLine());
             calculator.storeRestoreState();
-
-            config.set("precision", Rational.getPrecision());
-            config.set("scientific", switch(Rational.getToStringMode()) {
-                case SMART, DECIMAL_IF_POSSIBLE, FORCE_FRACTION, FORCE_DECIMAL -> false;
-                default -> true;
-            });
         }
     }
 
@@ -418,33 +528,34 @@ public class Calculator implements JsonSerializable {
      * @param mode A display mode override, or <code>null</code> to use the default
      */
     protected void printRes(Number res, Rational.ToStringMode mode) {
-        while(res instanceof Expression.Function f && f.paramCount() == 0)try {
-            Number val = f.evaluate(lookup, Expression.Numbers.EMPTY);
-            if(res.equals(val)) break;
-            res = val;
-        } catch(Exception e) {
-            Console.debug("Failed to evaluate parameter-less function, displaying as function:");
-            Console.debug(Utils.getStackTraceString(e));
-            break;
-        }
-
-        if(res instanceof Expression && !(res instanceof Expression.Numbers))
-            System.out.print(res);
-        else if(res instanceof Rational r) {
-            Rational.DetailedToString str = mode != null ? r.detailedToString(mode) : r.detailedToString();
-            System.out.print(str.precise() ? '=' : ABOUT_EQUAL);
-            System.out.print(' ');
-            if(str.precise() && !str.isFull()) {
-                int index = str.str().indexOf("\u00B7");
-                if(index == -1) System.out.print(str.str() + "...");
-                else System.out.print(str.str().substring(0, index) + "..." + str.str().substring(index));
+        runWithSettings(() -> {
+            Number n = res;
+            while (n instanceof Expression.Function f && f.paramCount() == 0) try {
+                Number val = f.evaluate(lookup, Expression.Numbers.EMPTY);
+                if(n.equals(val)) break;
+                n = val;
+            } catch (Exception e) {
+                Console.debug("Failed to evaluate parameter-less function, displaying as function:");
+                Console.debug(Utils.getStackTraceString(e));
+                break;
             }
-            else System.out.print(str.str());
-        }
-        else if(res instanceof SimpleNumber n && !n.precise() || res instanceof Complex c && !c.precise())
-            System.out.print(ABOUT_EQUAL + " " + res);
-        else System.out.print("= " + res);
-        System.out.println();
+
+            if(n instanceof Expression && !(n instanceof Expression.Numbers))
+                System.out.print(n);
+            else if(n instanceof Rational r) {
+                Rational.DetailedToString str = mode != null ? r.detailedToString(mode) : r.detailedToString();
+                System.out.print(str.precise() ? '=' : ABOUT_EQUAL);
+                System.out.print(' ');
+                if(str.precise() && !str.isFull()) {
+                    int index = str.str().indexOf("\u00B7");
+                    if(index == -1) System.out.print(str.str() + "...");
+                    else System.out.print(str.str().substring(0, index) + "..." + str.str().substring(index));
+                } else System.out.print(str.str());
+            } else if(n instanceof SimpleNumber sn && !sn.precise() || n instanceof Complex c && !c.precise())
+                System.out.print(ABOUT_EQUAL + " " + n);
+            else System.out.print("= " + n);
+            System.out.println();
+        });
     }
 
     private void storeRestoreState() {
@@ -526,6 +637,8 @@ public class Calculator implements JsonSerializable {
                 "vars", vars,
                 "ans", lookup.get("ans"),
                 "lastExpr", lastExpr,
+                "precision", precision,
+                "scientificNotation", scientificNotation,
                 "moreCount", moreCount,
                 "version", VERSION
         );
@@ -540,13 +653,15 @@ public class Calculator implements JsonSerializable {
             json.get("vars").forEach((n,v) -> calculator.lookup.put(n, v.as(Number.class)));
             calculator.lookup.setAns(json.get("ans").as(Number.class));
             calculator.lastExpr = json.get("lastExpr").asString();
+            calculator.setPrecision(json.get("precision").asInt());
+            calculator.setScientificNotation(json.get("scientificNotation").asBool());
             calculator.moreCount = json.get("moreCount").asInt();
             return calculator;
         });
     }
 
 
-    private static class Lookup extends DefaultSymbolLookup {
+    private class Lookup extends DefaultSymbolLookup {
 
         {
             DEFAULT_VARS.forEach(super::put);
@@ -556,41 +671,18 @@ public class Calculator implements JsonSerializable {
         @Override
         public Number get(String name) {
             Number var = super.get(name);
-            return var instanceof Rational r && !r.precise ? new Rational(r.toBigDecimal(), false) : var; // Round high-precision constants
+            return var instanceof Rational r && !r.precise ? runWithSettings(() -> new Rational(r.toBigDecimal(), false)) : var; // Round high-precision constants
         }
 
         @Override
         public void put(String name, @Nullable Number var) {
             if(DEFAULT_VARS.containsKey(name))
                 throw new MathEvaluationException("Cannot override variable '"+name+"'");
-            switch (name) {
-                case "precision" -> {
-                    assert var != null;
-                    int p = (int) Arguments.checkNull(var, "var").toDouble(this);
-                    if(p < 2)
-                        throw new MathEvaluationException("precision < 2");
-                    Rational.setPrecision(p);
-                    var = new Rational(p);
-                }
-                case "scientific" -> {
-                    assert var != null;
-                    boolean scientific = !Arguments.checkNull(var, "var").equals(Number.ZERO());
-                    Rational.setToStringMode(switch(Rational.getToStringMode()) {
-                        case SMART, SMART_SCIENTIFIC -> scientific ? Rational.ToStringMode.SMART_SCIENTIFIC : Rational.ToStringMode.SMART;
-                        case DECIMAL_IF_POSSIBLE, DECIMAL_IF_POSSIBLE_SCIENTIFIC -> scientific ? Rational.ToStringMode.DECIMAL_IF_POSSIBLE_SCIENTIFIC : Rational.ToStringMode.DECIMAL_IF_POSSIBLE;
-                        case FORCE_FRACTION, FORCE_FRACTION_SCIENTIFIC -> scientific ? Rational.ToStringMode.FORCE_FRACTION_SCIENTIFIC : Rational.ToStringMode.FORCE_FRACTION;
-                        case FORCE_DECIMAL, FORCE_DECIMAL_SCIENTIFIC -> scientific ? Rational.ToStringMode.FORCE_DECIMAL_SCIENTIFIC : Rational.ToStringMode.FORCE_DECIMAL;
-                    });
-                }
-                case "exit" -> {
-                    if(var == null) throw new MathEvaluationException("Cannot delete variable 'exit'");
-                }
-            }
             super.put(name, var);
         }
 
         void setAns(Number ans) {
-            super.put("ans", Expression.Function.of(ans));
+            super.put("ans", ans);
         }
     }
 }
