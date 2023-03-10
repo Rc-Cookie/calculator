@@ -418,17 +418,21 @@ public class Rational implements SimpleNumber {
                     e--;
                     n = n.multiply(BigInteger.TEN);
                 } while(n.compareTo(d) < 0);
+                if(n.compareTo(d) == 0) return new DetailedToString("10^" + e, x.precise, true);
+
                 DetailedToString str = mode.toString(new Rational(n, d, x.precise));
-                return new DetailedToString(str.str + "\u00B710^(" + e + ")", str.precise, str.isFull);
+                return new DetailedToString(str.str + "\u00B710^" + e, str.precise, str.isFull);
             }
             else {
                 while(n.compareTo(d) > 0) { // 1000/3 -> 1000/300 -> 10/3E2
                     e++;
                     d = d.multiply(BigInteger.TEN);
                 }
+                if(n.compareTo(d) == 0) return new DetailedToString("10^" + e, x.precise, true);
                 e--;
                 n = n.multiply(BigInteger.TEN);
                 DetailedToString str = mode.toString(new Rational(n, d, x.precise));
+                if(str.str.equals("1")) return new DetailedToString("10^" + e, str.precise, str.isFull);
                 return new DetailedToString(str.str + "\u00B710^" + e, str.precise, str.isFull);
             }
         }

@@ -48,7 +48,7 @@ public class Calculator implements JsonSerializable {
     /**
      * Version of this calculator API.
      */
-    public static final String VERSION = "2.8";
+    public static final String VERSION = "2.9";
 
     static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
     private static final Path RECENT_STATE_DIR = Path.of(STATE_STORE_DIR, "_recent");
@@ -355,7 +355,7 @@ public class Calculator implements JsonSerializable {
 
     public void evalCommand(String cmd) {
         Console.mapDebug("Received command", cmd);
-        String[] cmds = cmd.split("\s+");
+        String[] cmds = cmd.split("\\s+");
         cmds[0] = cmds[0].toLowerCase();
 
         if(cmds[0].equals("help")) {
