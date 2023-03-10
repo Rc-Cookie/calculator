@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 final class CalculatorUpdateChecker extends Thread {
 
-    private static final Version EXACT_VERSION = new Version(2, 8, 0);
+    private static final Version EXACT_VERSION = new Version(2, 9, 0);
 
     private boolean stop = false;
     private final boolean async;
