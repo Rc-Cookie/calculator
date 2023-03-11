@@ -38,12 +38,10 @@ public final class UpdateDispatcher {
 
         System.out.println("Downloading latest version (" + version + ")...");
 
-        String url;
-        if(System.getProperty("os.name").toLowerCase().contains("win"))
-            url = json.get("assets").stream()
-                    .filter(a -> a.get("name").asString().endsWith(".exe"))
+        String suffix = System.getProperty("os.name").toLowerCase().contains("win") ? ".exe" : ".jar";
+        String url = json.get("assets").stream()
+                    .filter(a -> a.get("name").asString().endsWith(suffix))
                     .findFirst().get().get("browser_download_url").asString();
-        else url = json.get("html_url").asString();
         Console.mapDebug("Download url", url);
 
         Path exe = Files.createTempFile("math", "exe").toAbsolutePath();
