@@ -48,7 +48,7 @@ public class Calculator implements JsonSerializable {
     /**
      * Version of this calculator API.
      */
-    public static final String VERSION = "2.9";
+    public static final Version VERSION = new Version(2, 10, 0);
 
     static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
     private static final Path RECENT_STATE_DIR = Path.of(STATE_STORE_DIR, "_recent");
@@ -422,7 +422,10 @@ public class Calculator implements JsonSerializable {
         ArgsParser parser = new ArgsParser();
         parser.addDefaults();
         parser.addOption('r', "restore", null, "Restore the last state or a state saved using \\store");
-        parser.setName("Java math interpreter - version " + VERSION + "\nBy RcCookie");
+        parser.addOption(null, "delete-update-jar", true).action(jar -> {
+            try { Files.delete(Path.of(jar)); Console.debug("Update jar deleted"); } catch(Exception e) { Console.debug(e); }
+        });
+        parser.setName(getTitleString(false));
         parser.setDescription("""
 
                         Usage: math [--options] [expression]
@@ -450,10 +453,7 @@ public class Calculator implements JsonSerializable {
 
 
 
-        System.out.println("Java math interpreter - version " + VERSION + """
-                            
-                            By RcCookie
-                            -----------------------------------""");
+        System.out.println(getTitleString(true));
 
         try {
             Config config = Config.fromAppdataPath("calculator");
@@ -479,7 +479,7 @@ public class Calculator implements JsonSerializable {
             calculator = actual;
 
             if(config.getBool("autoUpdate"))
-                CalculatorUpdateChecker.update(2000, true);
+                UpdateChecker.update(2000, true);
 
             calculator.registerCommand("autoUpdate", new Commands.LambdaCommand(
                     "Test or set whether to automatically check for updates",
@@ -502,8 +502,18 @@ public class Calculator implements JsonSerializable {
                         }
                     }
             ));
+            calculator.registerCommand("checkUpdate", new Commands.LambdaCommand(
+                    "Check for updates", (c,cmds) -> UpdateChecker.update(5000, false)));
             calculator.registerCommand("update", new Commands.LambdaCommand(
-                    "Check for updates", (c,cmds) -> CalculatorUpdateChecker.update(5000, false)));
+                "Updates the calculator to the latest version available. This will close the calculator.", (c,cmds) -> {
+                try {
+                    UpdateDispatcher.update();
+                } catch(Exception e) {
+                    System.err.println("Failed to update.");
+                    if(Console.getFilter().isEnabled("debug"))
+                        Console.error(e);
+                }
+            }));
         } catch(Exception e) {
             System.err.println("Failed to load settings");
             if(Console.getFilter().isEnabled("debug"))
@@ -519,6 +529,14 @@ public class Calculator implements JsonSerializable {
             calculator.evalInput(Console.in.readLine());
             calculator.storeRestoreState();
         }
+    }
+
+    private static String getTitleString(boolean withBar) {
+        String title = "Java math interpreter - version " + VERSION.a() + "." + VERSION.b();
+        title += "\nBy RcCookie";
+        if(withBar)
+            title += "\n" + ("-".repeat(title.lines().mapToInt(String::length).max().getAsInt()));
+        return title;
     }
 
     /**
@@ -646,9 +664,9 @@ public class Calculator implements JsonSerializable {
 
     static {
         JsonDeserialization.register(Calculator.class, json -> {
-            if(!VERSION.equals(json.get("version").orNull()))
+            if(!VERSION.equals(json.get("version").or(Version.class, new Version(0,0,0))))
                 Console.warn("Loading calculator with different version (current: {}, loading: {})",
-                        VERSION, json.get("version").or("Unspecified"));
+                        VERSION, json.containsKey("version") ? json.get("version").as(Version.class) : "Unspecified");
             Calculator calculator = new Calculator();
             json.get("vars").forEach((n,v) -> calculator.lookup.put(n, v.as(Number.class)));
             calculator.lookup.setAns(json.get("ans").as(Number.class));
