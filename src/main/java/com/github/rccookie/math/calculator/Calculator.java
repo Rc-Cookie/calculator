@@ -48,7 +48,7 @@ public class Calculator implements JsonSerializable {
     /**
      * Version of this calculator API.
      */
-    public static final Version VERSION = new Version(2, 10, 0);
+    public static final Version VERSION = new Version(2, 9, 1);
 
     static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
     private static final Path RECENT_STATE_DIR = Path.of(STATE_STORE_DIR, "_recent");
