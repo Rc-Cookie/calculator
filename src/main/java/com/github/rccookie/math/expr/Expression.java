@@ -545,6 +545,12 @@ public interface Expression extends Number {
         static Numbers of(Expression... elements) {
             return new NumbersImpl(elements.clone());
         }
+
+        static Numbers of(Number... elements) {
+            Expression[] e = new Expression[elements.length];
+            for(int i=0; i<e.length; i++) e[i] = Expression.of(elements[i]);
+            return new NumbersImpl(e);
+        }
     }
 
     /**

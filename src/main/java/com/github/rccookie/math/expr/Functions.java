@@ -4,6 +4,7 @@ import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
+import java.util.Arrays;
 import java.util.function.BinaryOperator;
 
 import com.github.rccookie.math.BigDecimalMath;
@@ -33,6 +34,7 @@ public final class Functions {
     public static final Expression.Function LD = new HardcodedFunction("ld", Functions::ld);
     public static final Expression.Function LOG = new HardcodedFunction("log", Functions::log);
     public static final Expression.Function FACTORIAL = new HardcodedFunction("factorial", Functions::factorial);
+    public static final Expression.Function BINOMIAL_COEFF = new HardcodedFunction("bin", Functions::binCoeff);
     public static final Expression.Function MIN = new HardcodedFunction("min", (BinaryOperator<Number>) Functions::min);
     public static final Expression.Function MAX = new HardcodedFunction("max", (BinaryOperator<Number>) Functions::max);
     public static final Expression.Function FLOOR = new HardcodedFunction("floor", Functions::floor);
@@ -46,10 +48,18 @@ public final class Functions {
     public static final Expression.Function ATAN = new HardcodedFunction("atan", Functions::atan);
     public static final Expression.Function ATAN2 = new HardcodedFunction("atan2", Functions::atan2);
     public static final Expression.Function ARGUMENT = new HardcodedFunction("arg", Functions::argument);
+    public static final Expression.Function RE = new HardcodedFunction("re", Functions::re);
+    public static final Expression.Function IM = new HardcodedFunction("im", Functions::im);
+    public static final Expression.Function COMPLEX_CONJUGATE = new HardcodedFunction("conj", Functions::complexConjugate);
+    public static final Expression.Function VECTOR = new HardcodedFunction("vec", (l,p) -> vector(l, p[0], p[1]), "size", "comp");
+    public static final Expression.Function MATRIX = new HardcodedFunction("mat", (l,p) -> matrix(l, p[0], p[1], p[2]), "m", "n", "comp");
     public static final Expression.Function GET = new HardcodedFunction("get", Functions::get);
     public static final Expression.Function SIZE = new HardcodedFunction("size", Functions::size);
     public static final Expression.Function NORMALIZE = new HardcodedFunction("norm", Functions::normalize);
+    public static final Expression.Function DOT = new HardcodedFunction("dot", Functions::dot);
     public static final Expression.Function CROSS = new HardcodedFunction("cross", Functions::cross);
+    public static final Expression.Function MATRIX_MULTIPLY = new HardcodedFunction("mmult", Functions::matrixMultiply);
+    public static final Expression.Function TRANSPOSITION = new HardcodedFunction("transp", Functions::transposition);
     public static final Expression.Function RAD_TO_DEG = new HardcodedFunction("deg", Functions::radToDeg);
     public static final Expression.Function DEG_TO_RAD = new HardcodedFunction("rad", Functions::degToRad);
     public static final Expression.Function SUM = new HardcodedFunction(SIGMA, (l,p) -> sum(l,p[0], p[1], p[2]), "low", "high", "f");
@@ -59,6 +69,8 @@ public final class Functions {
     public static final Expression.Function DERIVATIVE = new HardcodedFunction("der", (l,p) -> derivative(l,p[0],p[1],p[2]), "p", "deg", "ind");
     public static final Expression.Function ANTIDERIVATIVE = new HardcodedFunction("antiDer", (l,p) -> antiderivative(l,p[0],p[1],p[2]), "p", "deg", "ind");
     public static final Expression.Function INTEGRATE = new HardcodedFunction("int", (l,p) -> integrate(l,p[0],p[1],p[2],p[3]), "p", "a", "b", "ind");
+
+    public static final Expression.Function GAUSS = null;
 
     private static final Number LN_2 = ln(new Rational(2));
 
@@ -400,6 +412,66 @@ public final class Functions {
         };
     }
 
+    public static Number complexConjugate(Number x) {
+        return switch(x) {
+            case SimpleNumber n -> n;
+            case Complex c -> c.conjugate();
+            case Vector v -> v.derive(Functions::complexConjugate);
+            case Expression.Function f -> f.derive("conj", "conj($x$)", PRE, Functions::complexConjugate);
+            default -> throw new UnsupportedMathOperationException("conj", x);
+        };
+    }
+
+
+    public static Number vector(SymbolLookup l, Number size, Number componentF) {
+        if(size instanceof Expression.Function f)
+            return f.derive("dot", "dot($1,$2)", componentF, PRE, (s,$) -> vector(l,s,componentF));
+        int s = (int) size.toDouble(l);
+        if(s < 1) throw new MathEvaluationException("Non-positive vector size");
+        Number[] c = new Number[s];
+        if(componentF instanceof Expression.Function f)
+            for(int i=0; i<s; i++)
+                c[i] = f.evaluate(l, new Rational(i+1));
+        else Arrays.fill(c, componentF);
+        return new Vector(c);
+    }
+
+
+    public static Number matrix(SymbolLookup l, Number m, Number n, Number componentF) {
+        if(m instanceof Expression.Function f)
+            return f.derive("dot", "dot($x,"+n+","+componentF+")", PRE, mm -> matrix(l,mm, n, componentF));
+        if(n instanceof Expression.Function f)
+            return f.derive("dot", "dot("+m+",$x,"+componentF+")", PRE, nn -> matrix(l,m, nn, componentF));
+        int mm = (int) m.toDouble(l), nn = (int) n.toDouble(l);
+        if(mm < 1) throw new MathEvaluationException("Non-positive matrix row count");
+        if(nn < 1) throw new MathEvaluationException("Non-positive matrix column count");
+        Number[][] c = new Number[mm][nn];
+        if(componentF instanceof Expression.Function f)
+            for(int i=0; i<mm; i++)
+                for(int j=0; j<nn; j++)
+                    c[i][j] = f.evaluate(l, Expression.Numbers.of(new Rational(i+1), new Rational(j+1)));
+        else for(int i=0; i<mm; i++)
+            Arrays.fill(c[i], componentF);
+
+        Vector[] rows = new Vector[mm];
+        for(int i=0; i<rows.length; i++)
+            rows[i] = new Vector(c[i]);
+        return new Vector(rows);
+    }
+
+
+    public static Number dot(Number a, Number b) {
+        if(a instanceof Expression.Function f)
+            return f.derive("dot", "dot($1,$2)", b, PRE, Functions::dot);
+        if(b instanceof Expression.Function f)
+            return f.derive("dot", "dot($2,$1)", a, PRE, Functions::dot);
+        return dot(Vector.asVector(a), Vector.asVector(b));
+    }
+
+    public static Number dot(Vector a, Vector b) {
+        return a.dot(b);
+    }
+
 
     public static Number cross(Number a, Number b) {
         if(a instanceof Expression.Function f)
@@ -416,11 +488,56 @@ public final class Functions {
     }
 
 
+
+    public static Number matrixMultiply(Number a, Number b) {
+        if(a instanceof Expression.Function f)
+            return f.derive("mmult", "mmult($1,$2)", b, PRE, Functions::matrixMultiply);
+        if(b instanceof Expression.Function f)
+            return f.derive("mmult", "mmult($2,$1)", a, PRE, Functions::matrixMultiply);
+        return Vector.asVector(a).matrixMultiply(Vector.asVector(b));
+    }
+
+    public static Number transposition(Number x) {
+        if(x instanceof Expression.Function f)
+            return f.derive("transp", "transp($x)", PRE, Functions::transposition);
+        Vector m = Vector.asVector(x);
+        if(!m.isMatrix()) throw new MathEvaluationException("Cannot calculate transposition of non-matrix");
+        Vector[] rows = new Vector[m.size()];
+        for(int i=0; i<rows.length; i++)
+            rows[i] = Vector.asVector(m.get(i));
+        return Vector.matrixFromColumns(rows);
+    }
+
+
+//    public static Number get(Number v, Number i, Number j) {
+//        if(j == SymbolLookup.UNSPECIFIED)
+//            return get(v, i);
+//        if(v instanceof Expression.Function f)
+//            return f.derive("get", "get($x,"+i+","+j+")", PRE, vv -> get(vv,i,j));
+//        if(i instanceof Expression.Function f)
+//            return f.derive("get", "get("+v+",$x,"+j+")", PRE, ii -> get(v,ii,j));
+//        if(j instanceof Expression.Function f)
+//            return f.derive("get", "get("+v+","+i+",$x)", PRE, jj -> get(v,i,jj));
+//        if(i instanceof Expression.Function f)
+//            return f.derive("get", "get($2,$1)", v, PRE, Functions::get);
+//        return Vector.asVector(v).get(i.subtract(1));
+//    }
+
     public static Number get(Number v, Number i) {
+        if(v instanceof Expression.Constant c) v = c.value();
+        if(i instanceof Expression.Constant c) i = c.value();
         if(v instanceof Expression.Function f)
             return f.derive("get", "get($1,$2)", i, PRE, Functions::get);
         if(i instanceof Expression.Function f)
             return f.derive("get", "get($2,$1)", v, PRE, Functions::get);
+        if(i instanceof Expression.Numbers n) {
+            if(n.size() == 0)
+                throw new MathEvaluationException("Indices expected, got empty list");
+            Number x = v;
+            for(Number index : n)
+                x = get(x,index);
+            return x;
+        }
         return Vector.asVector(v).get(i.subtract(1));
     }
 
@@ -483,6 +600,10 @@ public final class Functions {
         for(; x.toDouble() > 0; x = x.subtract(ONE()))
             res = res.multiply(x);
         return res;
+    }
+
+    public static Number binCoeff(Number n, Number k) {
+        return factorial(n).divide(factorial(k).multiply(factorial(n.subtract(k))));
     }
 
 

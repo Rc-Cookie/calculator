@@ -48,7 +48,7 @@ public class Calculator implements JsonSerializable {
     /**
      * Version of this calculator API.
      */
-    public static final Version VERSION = new Version(2, 9, 1);
+    public static final Version VERSION = new Version(2, 11, 0);
 
     static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
     private static final Path RECENT_STATE_DIR = Path.of(STATE_STORE_DIR, "_recent");
@@ -88,18 +88,27 @@ public class Calculator implements JsonSerializable {
             "atan", Functions.ATAN,
             "atan2", Functions.ATAN2,
             "arg", Functions.ARGUMENT,
+            "re", Functions.RE,
+            "im", Functions.IM,
+            "conj", Functions.COMPLEX_CONJUGATE,
             "abs", Functions.ABS,
             "sqrt", Functions.SQRT,
             "hypot", Functions.HYPOT,
             "factorial", Functions.FACTORIAL,
+            "bin", Functions.BINOMIAL_COEFF,
             "exp", Functions.EXP,
             "ln", Functions.LN,
             "ld", Functions.LD,
             "log", Functions.LOG,
+            "vec", Functions.VECTOR,
+            "mat", Functions.MATRIX,
             "get", Functions.GET,
             "size", Functions.SIZE,
             "norm", Functions.NORMALIZE,
+            "dot", Functions.DOT,
             "cross", Functions.CROSS,
+            "mmult", Functions.MATRIX_MULTIPLY,
+            "transp", Functions.TRANSPOSITION,
             "deg", Functions.RAD_TO_DEG,
             "rad", Functions.DEG_TO_RAD,
             "sum", Functions.SUM,

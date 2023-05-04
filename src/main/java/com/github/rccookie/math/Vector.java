@@ -6,7 +6,10 @@ import java.util.function.UnaryOperator;
 
 import com.github.rccookie.json.JsonArray;
 import com.github.rccookie.json.JsonDeserialization;
+import com.github.rccookie.math.expr.MathEvaluationException;
+import com.github.rccookie.math.expr.MathExpressionSyntaxException;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.primitive.int2;
 import com.github.rccookie.util.Arguments;
 
 import org.jetbrains.annotations.NotNull;
@@ -105,19 +108,37 @@ public class Vector implements Number {
     }
 
     public Number get(int index) {
+        if(index < 0) throw new MathEvaluationException("Vector index out of lower bounds"); // Don't specify index, may be 0-indexed or 1-indexed for calculator
         return index < components.length ? components[index] : SymbolLookup.UNSPECIFIED;
+    }
+
+    public Number get(int row, int column) {
+        if(row < 0 || column < 0)
+            throw new MathEvaluationException("Matrix index out of lower bounds");
+        if(row >= components.length)
+            return SymbolLookup.UNSPECIFIED;
+        Number rowComponents = components[row];
+        if(rowComponents instanceof Vector v)
+            return v.get(column);
+        return column == 0 ? rowComponents : SymbolLookup.UNSPECIFIED;
     }
 
     public Number get(Number index) {
         return switch(index) {
-            case Vector indices -> get(indices);
+            case Vector indices -> indices.derive(this, ($, i) -> get(i));
             case SimpleNumber n -> get((int) n.toDouble());
             default -> throw new UnsupportedOperationException();
         };
     }
 
-    public Vector get(Vector indices) {
-        return indices.derive(this, ($, i) -> get(i));
+    public Number get(Number row, Number column) {
+        if(row instanceof Vector rows)
+            return rows.derive(this, ($,r) -> get(r, column));
+        if(column instanceof Vector columns)
+            return columns.derive(this, ($,c) -> get(row, c));
+        if(!(row instanceof SimpleNumber && column instanceof SimpleNumber))
+            throw new UnsupportedOperationException();
+        return get((int) row.toDouble(), (int) column.toDouble());
     }
 
     public Number x() {
@@ -132,12 +153,92 @@ public class Vector implements Number {
         return get(2);
     }
 
+    public Vector[] rows() {
+        if(isScalar()) return new Vector[] { this };
+        if(!isMatrix())
+            throw new MathEvaluationException("Vector is not a matrix, cannot receive rows");
+
+        Vector[] rows = new Vector[components.length];
+        for(int i=0; i<rows.length; i++)
+            rows[i] = (Vector) components[i];
+        return rows;
+    }
+
+    public Vector[] columns() {
+        if(isScalar()) return new Vector[] { this };
+        if(!isMatrix())
+            throw new MathEvaluationException("Vector is not a matrix, cannot receive columns");
+
+        Vector[] columns = new Vector[((Vector) components[0]).components.length];
+        for(int i=0; i<columns.length; i++) {
+            Number[] column = new Number[components.length];
+            for(int j=0; j<column.length; j++)
+                column[j] = ((Vector) components[j]).components[i];
+            columns[i] = new Vector(column);
+        }
+        return columns;
+    }
+
     public int size() {
         return components.length;
     }
 
+    public int rowCount() {
+        if(!isMatrix())
+            throw new MathEvaluationException("Vector is not a matrix, cannot receive row count");
+        return components.length;
+    }
+
+    public int columnCount() {
+        if(!isMatrix())
+            throw new MathEvaluationException("Vector is not a matrix, cannot receive column count");
+        if(components[0] instanceof Vector row)
+            return row.components.length;
+        return 1; // Primitive as row => one element
+    }
+
+    public Vector[] getMatrixRows() {
+        if(!isMatrix()) throw new MathEvaluationException("Vector is not a matrix, cannot receive matrix rows");
+        Vector[] rows = new Vector[components.length];
+        for(int i=0; i<rows.length; i++)
+            rows[i] = Vector.asVector(components[i]);
+        return rows;
+    }
+
     public boolean isScalar() {
-        return components.length == 1;
+        return components.length == 1 && (!(components[0] instanceof Vector row) || row.isScalar());
+    }
+
+    private Number getScalarValue() {
+        if(components.length != 1) throw new MathEvaluationException("Matrix is not a scalar");
+        if(!(components[0] instanceof Vector v)) return components[0];
+        return v.getScalarValue();
+    }
+
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public boolean isMatrix() {
+        if(components.length == 1) return true;
+        int expected = size(components[0]);
+        for(int i=1; i<components.length; i++)
+            if(size(components[i]) != expected)
+                return false;
+        return true;
+    }
+
+    public boolean isColumn() {
+        return getMatrixSize().y == 1;
+    }
+
+    public boolean isRow() {
+        return getMatrixSize().x == 1;
+    }
+
+    private int2 getMatrixSize() {
+        return new int2(components.length, size(components[0]));
+    }
+
+    private static int size(Number x) {
+        return x instanceof Vector v ? v.size() : 1;
     }
 
     public boolean isZero() {
@@ -179,7 +280,31 @@ public class Vector implements Number {
     @Override
     @NotNull
     public Number multiply(Number x) {
-        return x instanceof Vector v ? dot(v) : derive(c -> c.multiply(x));
+        if(!(x instanceof Vector v) || !isMatrix() || !v.isMatrix()) return derive(c -> c.multiply(x));
+        if(v.isScalar()) return derive(c -> c.multiply(v.getScalarValue()));
+        if(isScalar()) return v.derive(c -> c.multiply(getScalarValue()));
+        if((isColumn() && v.isColumn()) || (isRow() && v.isRow())) return dot(v);
+        return matrixMultiply(v);
+    }
+
+    @NotNull
+    public Number matrixMultiply(Vector matrix) {
+        int2 size = getMatrixSize(), otherSize = matrix.getMatrixSize();
+        int m = size.x, n = size.y, otherM = otherSize.x, otherN = otherSize.y;
+        if(n != otherM) throw new MathEvaluationException("Trying to multiply incompatible matrices");
+
+        Vector result = new Vector(true, new Number[m]);
+        for(int i=0; i<m; i++) {
+            Vector row = new Vector(true, new Number[otherN]);
+            for(int j=0; j<otherN; j++) {
+                Number sum = Number.ZERO();
+                for(int k=0; k<n; k++)
+                    sum = sum.add(get(i,k).multiply(matrix.get(k,j)));
+                row.components[j] = sum;
+            }
+            result.components[i] = row;
+        }
+        return result;
     }
 
     @NotNull
@@ -284,5 +409,48 @@ public class Vector implements Number {
 
     public static Vector asVector(Number x) {
         return x instanceof Vector v ? v : new Vector(x);
+    }
+
+    public static Vector matrix(int rows, int columns, Number... componentsRowByRow) {
+        Arguments.checkRange(rows, 1, null);
+        Arguments.checkRange(columns, 1, null);
+        Arguments.deepCheckNull(componentsRowByRow, "componentsRowByRow");
+        if(componentsRowByRow.length != rows * columns)
+            throw new IllegalArgumentException("Wrong number of components (expected " + rows + "*" + columns + "=" + rows*columns + ", got " + componentsRowByRow.length);
+        Vector[] rowVectors = new Vector[rows];
+        for(int i=0; i<rows; i++)
+            rowVectors[i] = new Vector(Arrays.copyOfRange(componentsRowByRow, i, i + columns));
+        return new Vector(true, rowVectors);
+    }
+
+    public static Vector matrixFromRows(Vector... rows) {
+        Arguments.deepCheckNull(rows, "rows");
+        if(rows.length == 0)
+            throw new IllegalArgumentException("Matrix requires at least one row");
+        int expected = rows[0].size();
+        for(int i=1; i<rows.length; i++)
+            if(rows[i].size() != expected)
+                throw new MathExpressionSyntaxException("Matrix rows must have same number of entries");
+        return new Vector(rows);
+    }
+
+    public static Vector matrixFromColumns(Vector... columns) {
+        Arguments.deepCheckNull(columns, "columns");
+        if(columns.length == 0)
+            throw new IllegalArgumentException("Matrix requires at least one column");
+        Vector[] rows = new Vector[columns[0].size()];
+
+        for(int i=1; i<columns.length; i++)
+            if(columns[i].size() != rows.length)
+                throw new MathExpressionSyntaxException("Matrix columns must have same number of entries");
+
+        for(int i=0; i<rows.length; i++) {
+            Number[] row = new Number[columns.length];
+            for(int j=0; j<row.length; j++)
+                row[j] = columns[j].get(i);
+            rows[i] = new Vector(row);
+        }
+
+        return new Vector(true, rows);
     }
 }

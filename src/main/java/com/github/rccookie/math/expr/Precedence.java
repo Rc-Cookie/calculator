@@ -37,6 +37,6 @@ public final class Precedence {
     public static final int GREATER = EQUALS;
     public static final int GREATER_OR_EQUAL = EQUALS;
 
-    public static final int IMPLICIT = MULTIPLY;
+    public static final int IMPLICIT = MULTIPLY + 1;
     public static final int FUNCTION_CALL = IMPLICIT;
 }

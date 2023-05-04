@@ -139,7 +139,8 @@ final class Builder implements Expression {
             for(int i=0; i<simplified.length; i++) {
                 if(simplified[i] instanceof Expression) {
                     Expression[] es = new Expression[simplified.length];
-                    System.arraycopy(simplified, 0, es, 0, es.length);
+                    for(int j=0; j<es.length; j++)
+                        es[i] = Expression.of(simplified[i]);
                     return new VectorExpression(es);
                 }
             }

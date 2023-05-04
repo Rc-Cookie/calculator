@@ -180,6 +180,10 @@ public class Complex implements Number {
         };
     }
 
+    public @NotNull Complex conjugate() {
+        return new Complex(re, im.negate());
+    }
+
     public @NotNull SimpleNumber theta() {
         if(equals(ZERO))
             throw new ArithmeticException("Argument of 0 is undefined");

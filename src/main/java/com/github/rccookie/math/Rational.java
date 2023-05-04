@@ -110,6 +110,9 @@ public class Rational implements SimpleNumber {
         this.d = d.divide(gcd);
         this.precise = precise;
     }
+    public Rational(long n) {
+        this(n,1);
+    }
     public Rational(long n, long d) {
         this(n,d,true);
     }

@@ -24,6 +24,10 @@ public interface Number extends JsonSerializable {
     @NotNull static SimpleNumber RAD_TO_DEG() { return Rational.RAD_TO_DEG; }
     @NotNull static SimpleNumber DEG_TO_RAD() { return Rational.DEG_TO_RAD; }
 
+    @NotNull static SimpleNumber TRUE() { return ONE(); }
+    @NotNull static SimpleNumber FALSE() { return ZERO(); }
+
+
 
     Object _null = registerJson();
     private static Object registerJson() {
@@ -230,4 +234,10 @@ public interface Number extends JsonSerializable {
     }
 
     double toDouble(SymbolLookup lookup);
+
+
+    @NotNull
+    static SimpleNumber bool(boolean oneOrZero) {
+        return oneOrZero ? TRUE() : FALSE();
+    }
 }
