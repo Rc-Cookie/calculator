@@ -36,6 +36,11 @@ public interface Expression extends Number {
      */
     static Expression UNSPECIFIED() { return SymbolLookup.UNSPECIFIED_EXPR; }
 
+    /**
+     * An expression representing a free variable which could be any value.
+     */
+    static Expression WILDCARD() { return Wildcard.INSTANCE; }
+
 
     Object _null = registerJson();
     private static Object registerJson() {
@@ -92,6 +97,16 @@ public interface Expression extends Number {
     @Override
     default Object toJson() {
         return toString();
+    }
+
+    @Override
+    default boolean isZero() {
+        return false;
+    }
+
+    @Override
+    default boolean isOne() {
+        return false;
     }
 
     @Override
@@ -268,6 +283,16 @@ public interface Expression extends Number {
         Number value();
 
         @Override
+        default boolean isZero() {
+            return value().isZero();
+        }
+
+        @Override
+        default boolean isOne() {
+            return value().isOne();
+        }
+
+        @Override
         default Number evaluate(SymbolLookup lookup) {
             return value();
         }
@@ -426,6 +451,12 @@ public interface Expression extends Number {
     interface Numbers extends Expression, Iterable<Expression> {
 
         Numbers EMPTY = new NumbersImpl();
+
+        @Override
+        boolean isZero();
+
+        @Override
+        boolean isOne();
 
         int size();
 

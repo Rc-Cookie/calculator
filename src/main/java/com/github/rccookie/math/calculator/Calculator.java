@@ -119,7 +119,10 @@ public class Calculator implements JsonSerializable {
             "poly", Functions.POLYNOM,
             "der", Functions.DERIVATIVE,
             "antiDer", Functions.ANTIDERIVATIVE,
-            "int", Functions.INTEGRATE
+            "int", Functions.INTEGRATE,
+
+            "reduce", Functions.REDUCE,
+            "gauss", Functions.GAUSS
     ));
     private static final Map<String, Number> OPTIONAL_DEFAULT_VARS = Utils.map(
             "precision", new Rational(Rational.getPrecision()),

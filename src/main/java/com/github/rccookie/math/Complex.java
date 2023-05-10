@@ -71,6 +71,16 @@ public class Complex implements Number {
         return re.hashCode() ^ im.hashCode();
     }
 
+    @Override
+    public boolean isZero() {
+        return re.isZero() && im.isZero();
+    }
+
+    @Override
+    public boolean isOne() {
+        return re.isOne() && im.isZero(); // TODO: this is bad
+    }
+
     public boolean isReal() {
         return im.equals(Number.ZERO());
     }

@@ -8,12 +8,15 @@ import java.util.Arrays;
 import java.util.function.BinaryOperator;
 
 import com.github.rccookie.math.BigDecimalMath;
-import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.SimpleNumber;
 import com.github.rccookie.math.Vector;
+import com.github.rccookie.math.solve.LinearEquationSystem;
 import com.github.rccookie.math.solve.Polynom;
+
+import org.jetbrains.annotations.Contract;
 
 import static com.github.rccookie.math.Number.*;
 
@@ -70,7 +73,8 @@ public final class Functions {
     public static final Expression.Function ANTIDERIVATIVE = new HardcodedFunction("antiDer", (l,p) -> antiderivative(l,p[0],p[1],p[2]), "p", "deg", "ind");
     public static final Expression.Function INTEGRATE = new HardcodedFunction("int", (l,p) -> integrate(l,p[0],p[1],p[2],p[3]), "p", "a", "b", "ind");
 
-    public static final Expression.Function GAUSS = null;
+    public static final Expression.Function REDUCE = new HardcodedFunction("reduce", Functions::gaussReduction);
+    public static final Expression.Function GAUSS = new HardcodedFunction("gauss", Functions::gauss);
 
     private static final Number LN_2 = ln(new Rational(2));
 
@@ -79,6 +83,8 @@ public final class Functions {
     private Functions() { }
 
     public static Number min(Number a, Number b) {
+        a = value(a);
+        b = value(b);
         if(a instanceof Expression.Function f)
             return f.derive("min", "min($1,$2)", b, PRE, Functions::min);
         if(b instanceof Expression.Function f)
@@ -90,6 +96,7 @@ public final class Functions {
     }
 
     public static Number min(Number x) {
+        x = value(x);
         if(!(x instanceof Vector v)) return x;
         Number min = v.get(0);
         for(int i=1; i<v.size(); i++)
@@ -98,6 +105,8 @@ public final class Functions {
     }
 
     public static Number max(Number a, Number b) {
+        a = value(a);
+        b = value(b);
         if(a instanceof Expression.Function f)
             return f.derive("max", "max($1,$2)", b, PRE, Functions::max);
         if(b instanceof Expression.Function f)
@@ -109,6 +118,7 @@ public final class Functions {
     }
 
     public static Number max(Number x) {
+        x = value(x);
         if(!(x instanceof Vector v)) return x;
         Number max = v.get(0);
         for(int i=1; i<v.size(); i++)
@@ -119,6 +129,7 @@ public final class Functions {
 
 
     public static Number floor(Number x) {
+        x = value(x);
         return switch(x) {
             case Rational r -> new Rational(r.n.divide(r.d));
             case SimpleNumber n -> new Rational(n.toBigDecimal().setScale(0, RoundingMode.FLOOR));
@@ -130,6 +141,7 @@ public final class Functions {
     }
 
     public static Number ceil(Number x) {
+        x = value(x);
         return switch(x) {
             case Rational r -> new Rational(r.n.add(r.d).subtract(BigInteger.ONE).divide(r.d));
             case SimpleNumber n -> new Rational(n.toBigDecimal().setScale(0, RoundingMode.CEILING));
@@ -141,6 +153,7 @@ public final class Functions {
     }
 
     public static Number round(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber n -> new Rational(n.toBigDecimal().setScale(0, RoundingMode.HALF_UP));
             case Complex c -> new Complex((SimpleNumber) round(c.re), (SimpleNumber) round(c.im));
@@ -153,6 +166,7 @@ public final class Functions {
 
 
     public static Number sin(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber n -> sin(n);
             case Complex c -> sin(c);
@@ -175,6 +189,7 @@ public final class Functions {
 
 
     public static Number cos(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber n -> cos(n);
             case Complex c -> cos(c);
@@ -203,6 +218,7 @@ public final class Functions {
 
 
     public static Number asin(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber n -> asin(n);
             case Complex c -> asin(c);
@@ -232,6 +248,7 @@ public final class Functions {
     }
 
     public static Number acos(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber r -> acos(r);
             case Complex c -> acos(c);
@@ -262,6 +279,7 @@ public final class Functions {
 
 
     public static Number atan(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber n -> atan(n);
             case Complex c -> atan(c);
@@ -282,31 +300,34 @@ public final class Functions {
 
 
     public static Number atan2(Number y, Number x) {
-        if(y instanceof Expression.Function f)
-            return f.derive("atan2", "atan2($1,$2)", x, PRE, Functions::atan2);
-        if(x instanceof Expression.Function f)
-            return f.derive("atan2", "atan2($2,1)", y, PRE, Functions::atan2);
-        if(y instanceof Vector vy) {
-            if(x instanceof Vector vx)
+        //noinspection SuspiciousNameCombination
+        Number _y = value(y);
+        Number _x = value(x);
+        if(_y instanceof Expression.Function f)
+            return f.derive("atan2", "atan2($1,$2)", _x, PRE, Functions::atan2);
+        if(_x instanceof Expression.Function f)
+            return f.derive("atan2", "atan2($2,1)", _y, PRE, Functions::atan2);
+        if(_y instanceof Vector vy) {
+            if(_x instanceof Vector vx)
                 return vy.derive(vx, Functions::atan2);
-            return vy.derive(yc -> atan2(yc, x));
+            return vy.derive(yc -> atan2(yc, _x));
         }
-        if(x instanceof Vector vx)
-            return vx.derive(xc -> atan2(y, xc));
-        if(!(x instanceof SimpleNumber && y instanceof SimpleNumber))
-            throw new UnsupportedMathOperationException("atan", y, x);
+        if(_x instanceof Vector vx)
+            return vx.derive(xc -> atan2(_y, xc));
+        if(!(_x instanceof SimpleNumber && _y instanceof SimpleNumber))
+            throw new UnsupportedMathOperationException("atan", _y, _x);
 
-        if(x.equals(ZERO())) {
-            if(y.greaterThan(ZERO()).equals(ONE()))
+        if(_x.equals(ZERO())) {
+            if(_y.greaterThan(ZERO()).equals(ONE()))
                 return PI().divide(2);
-            if(!y.equals(ZERO()))
+            if(!_y.equals(ZERO()))
                 return PI().divide(-2);
             throw new ArithmeticException("atan2 of 0,0");
         }
-        Number atan = atan(y.divide(x));
-        if(x.greaterThan(ZERO()).equals(ONE()))
+        Number atan = atan(_y.divide(_x));
+        if(_x.greaterThan(ZERO()).equals(ONE()))
             return atan;
-        if(y.greaterThanOrEqual(ZERO()).equals(ONE()))
+        if(_y.greaterThanOrEqual(ZERO()).equals(ONE()))
             return atan.add(PI());
         return atan.subtract(PI());
     }
@@ -314,6 +335,7 @@ public final class Functions {
 
 
     public static Number exp(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber n -> exp(n);
             case Complex c -> exp(c);
@@ -337,6 +359,7 @@ public final class Functions {
 
 
     public static Number ln(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber r -> ln(r);
             case Complex c -> ln(c);
@@ -377,6 +400,7 @@ public final class Functions {
 
 
     public static Number argument(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber n -> {
                 if(n.greaterThan(ZERO()).equals(ONE()))
@@ -393,6 +417,7 @@ public final class Functions {
     }
 
     public static Number re(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber n -> n;
             case Complex c -> c.re;
@@ -403,6 +428,7 @@ public final class Functions {
     }
 
     public static Number im(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber ignored -> ZERO();
             case Complex c -> c.im;
@@ -413,6 +439,7 @@ public final class Functions {
     }
 
     public static Number complexConjugate(Number x) {
+        x = value(x);
         return switch(x) {
             case SimpleNumber n -> n;
             case Complex c -> c.conjugate();
@@ -424,34 +451,39 @@ public final class Functions {
 
 
     public static Number vector(SymbolLookup l, Number size, Number componentF) {
+        size = value(size);
+        Number _componentF = value(componentF);
         if(size instanceof Expression.Function f)
-            return f.derive("dot", "dot($1,$2)", componentF, PRE, (s,$) -> vector(l,s,componentF));
+            return f.derive("dot", "dot($1,$2)", _componentF, PRE, (s,$) -> vector(l,s,_componentF));
         int s = (int) size.toDouble(l);
         if(s < 1) throw new MathEvaluationException("Non-positive vector size");
         Number[] c = new Number[s];
-        if(componentF instanceof Expression.Function f)
+        if(_componentF instanceof Expression.Function f)
             for(int i=0; i<s; i++)
                 c[i] = f.evaluate(l, new Rational(i+1));
-        else Arrays.fill(c, componentF);
+        else Arrays.fill(c, _componentF);
         return new Vector(c);
     }
 
 
     public static Number matrix(SymbolLookup l, Number m, Number n, Number componentF) {
-        if(m instanceof Expression.Function f)
-            return f.derive("dot", "dot($x,"+n+","+componentF+")", PRE, mm -> matrix(l,mm, n, componentF));
-        if(n instanceof Expression.Function f)
-            return f.derive("dot", "dot("+m+",$x,"+componentF+")", PRE, nn -> matrix(l,m, nn, componentF));
-        int mm = (int) m.toDouble(l), nn = (int) n.toDouble(l);
+        Number _m = value(m);
+        Number _n = value(n);
+        Number _componentF = value(componentF);
+        if(_m instanceof Expression.Function f)
+            return f.derive("dot", "dot($x,"+_n+","+_componentF+")", PRE, mm -> matrix(l,mm, _n, _componentF));
+        if(_n instanceof Expression.Function f)
+            return f.derive("dot", "dot("+_m+",$x,"+_componentF+")", PRE, nn -> matrix(l,_m, nn, _componentF));
+        int mm = (int) _m.toDouble(l), nn = (int) _n.toDouble(l);
         if(mm < 1) throw new MathEvaluationException("Non-positive matrix row count");
         if(nn < 1) throw new MathEvaluationException("Non-positive matrix column count");
         Number[][] c = new Number[mm][nn];
-        if(componentF instanceof Expression.Function f)
+        if(_componentF instanceof Expression.Function f)
             for(int i=0; i<mm; i++)
                 for(int j=0; j<nn; j++)
                     c[i][j] = f.evaluate(l, Expression.Numbers.of(new Rational(i+1), new Rational(j+1)));
         else for(int i=0; i<mm; i++)
-            Arrays.fill(c[i], componentF);
+            Arrays.fill(c[i], _componentF);
 
         Vector[] rows = new Vector[mm];
         for(int i=0; i<rows.length; i++)
@@ -461,6 +493,8 @@ public final class Functions {
 
 
     public static Number dot(Number a, Number b) {
+        a = value(a);
+        b = value(b);
         if(a instanceof Expression.Function f)
             return f.derive("dot", "dot($1,$2)", b, PRE, Functions::dot);
         if(b instanceof Expression.Function f)
@@ -474,6 +508,8 @@ public final class Functions {
 
 
     public static Number cross(Number a, Number b) {
+        a = value(a);
+        b = value(b);
         if(a instanceof Expression.Function f)
             return f.derive("cross", "cross($1,$2)", b, PRE, Functions::cross);
         if(b instanceof Expression.Function f)
@@ -490,6 +526,8 @@ public final class Functions {
 
 
     public static Number matrixMultiply(Number a, Number b) {
+        a = value(a);
+        b = value(b);
         if(a instanceof Expression.Function f)
             return f.derive("mmult", "mmult($1,$2)", b, PRE, Functions::matrixMultiply);
         if(b instanceof Expression.Function f)
@@ -498,6 +536,7 @@ public final class Functions {
     }
 
     public static Number transposition(Number x) {
+        x = value(x);
         if(x instanceof Expression.Function f)
             return f.derive("transp", "transp($x)", PRE, Functions::transposition);
         Vector m = Vector.asVector(x);
@@ -506,6 +545,115 @@ public final class Functions {
         for(int i=0; i<rows.length; i++)
             rows[i] = Vector.asVector(m.get(i));
         return Vector.matrixFromColumns(rows);
+    }
+
+
+
+    public static Number gauss(Number m, Number b) {
+        if(b == SymbolLookup.UNSPECIFIED)
+            return homogenousGauss(m);
+        m = value(m);
+        b = value(b);
+        if(m instanceof Expression.Function f)
+            return f.derive("gauss", "gauss($1,$2)", b, PRE, Functions::gauss);
+        if(b instanceof Expression.Function f)
+            return f.derive("gauss", "gauss($2,$1)", m, PRE, Functions::gauss);
+
+        Vector mv = Vector.asVector(m), bv = Vector.asVector(b);
+        if(!mv.isMatrix() || !bv.isMatrix())
+            throw new MathEvaluationException("Matrices expected for gauss elimination");
+        if(mv.rowCount() != bv.rowCount())
+            throw new MathEvaluationException("Matrices must have same height for gauss elimination");
+
+        int unknowns = mv.columnCount(), bCount = bv.columnCount();
+        Number[][] aug = new Number[mv.rowCount()][unknowns + bCount];
+        for(int i=0; i<aug.length; i++) {
+            for(int j=0; j<unknowns; j++)
+                aug[i][j] = mv.get(i,j);
+            for(int j=0; j<bCount; j++)
+                aug[i][j+unknowns] = bv.get(i,j);
+        }
+
+        Number[][] solutions = new LinearEquationSystem(unknowns, aug).solve();
+        for(int i=0; i<solutions.length; i++) for(int j=0; j<solutions[0].length; j++)
+            if(solutions[i][j] == null) solutions[i][j] = Expression.WILDCARD();
+
+        if(solutions.length == 1)
+            return new Vector(solutions[0]);
+        return Vector.matrixFromRows(Arrays.stream(solutions).map(Vector::new).toArray(Vector[]::new));
+    }
+
+    private static Number homogenousGauss(Number m) {
+        m = value(m);
+        if(m instanceof Expression.Function f)
+            return f.derive("gauss", "gauss($x)", PRE, Functions::homogenousGauss);
+
+        Vector mv = Vector.asVector(m);
+        if(!mv.isMatrix())
+            throw new MathEvaluationException("Matrix expected for gauss elimination");
+
+        int height = mv.rowCount(), width = mv.columnCount();
+        Number[][] arr = new Number[height][width];
+        for(int i=0; i<height; i++) for(int j=0; j<width; j++)
+            arr[i][j] = mv.get(i,j);
+
+        Number[] solution = new LinearEquationSystem(width, arr).solve()[0];
+        for(int i=0; i<solution.length; i++)
+            if(solution[i] == null) solution[i] = Expression.WILDCARD();
+        return new Vector(solution);
+    }
+
+    public static Number gaussReduction(Number m, Number b) {
+        if(b == SymbolLookup.UNSPECIFIED)
+            return homogenousGaussReduction(m);
+        m = value(m);
+        b = value(b);
+        if(m instanceof Expression.Function f)
+            return f.derive("reduce", "reduce($1,$2)", b, PRE, Functions::gaussReduction);
+        if(b instanceof Expression.Function f)
+            return f.derive("reduce", "reduce($2,$1)", m, PRE, Functions::gaussReduction);
+
+        Vector mv = Vector.asVector(m), bv = Vector.asVector(b);
+        if(!mv.isMatrix() || !bv.isMatrix())
+            throw new MathEvaluationException("Matrices expected for gauss reduction");
+        if(mv.rowCount() != bv.rowCount())
+            throw new MathEvaluationException("Matrices must have same height for gauss reduction");
+
+        int unknowns = mv.columnCount(), bCount = bv.columnCount();
+        Number[][] aug = new Number[mv.rowCount()][unknowns + bCount];
+        for(int i=0; i<aug.length; i++) {
+            for(int j=0; j<unknowns; j++)
+                aug[i][j] = mv.get(i,j);
+            for(int j=0; j<bCount; j++)
+                aug[i][j+unknowns] = bv.get(i,j);
+        }
+
+        LinearEquationSystem solution = new LinearEquationSystem(unknowns, aug).toReducedEchelonForm();
+        Vector[] rows = new Vector[aug.length];
+        for(int i=0; i<aug.length; i++)
+            rows[i] = new Vector(solution.getRow(i));
+        return new Vector(rows);
+    }
+
+    private static Number homogenousGaussReduction(Number m) {
+        m = value(m);
+        if(m instanceof Expression.Function f)
+            return f.derive("reduce", "reduce($x)", PRE, Functions::homogenousGaussReduction);
+
+        Vector mv = Vector.asVector(m);
+        if(!mv.isMatrix())
+            throw new MathEvaluationException("Matrix expected for gauss reduction");
+
+        int height = mv.rowCount(), width = mv.columnCount();
+        Number[][] arr = new Number[height][width];
+        for(int i=0; i<height; i++) for(int j=0; j<width; j++)
+            arr[i][j] = mv.get(i,j);
+
+        LinearEquationSystem solution = new LinearEquationSystem(width, arr).toReducedEchelonForm();
+        Vector[] rows = new Vector[height];
+        for(int i=0; i<height; i++)
+            rows[i] = new Vector(solution.getRow(i));
+        return new Vector(rows);
     }
 
 
@@ -524,6 +672,8 @@ public final class Functions {
 //    }
 
     public static Number get(Number v, Number i) {
+        v = value(v);
+        i = value(i);
         if(v instanceof Expression.Constant c) v = c.value();
         if(i instanceof Expression.Constant c) i = c.value();
         if(v instanceof Expression.Function f)
@@ -542,12 +692,14 @@ public final class Functions {
     }
 
     public static Number size(Number x) {
+        x = value(x);
         if(x instanceof Expression.Function f)
             return f.derive("size", "size($x)", PRE, Functions::size);
         return x instanceof Vector v ? new Rational(v.size()) : ONE();
     }
 
     public static Number normalize(Number x) {
+        x = value(x);
         return switch(x) {
             case Vector v -> v.normalize();
             case Complex c -> c.normalize();
@@ -560,24 +712,29 @@ public final class Functions {
 
 
     public static Number radToDeg(Number x) {
+        x = value(x);
         return x.multiply(RAD_TO_DEG());
     }
 
     public static Number degToRad(Number x) {
+        x = value(x);
         return x.multiply(DEG_TO_RAD());
     }
 
     public static Number fromPercent(Number x) {
+        x = value(x);
         return x.divide(100);
     }
 
 
 
     public static Number square(Number x) {
+        x = value(x);
         return x.raise(TWO());
     }
 
     public static Number cube(Number x) {
+        x = value(x);
         return x.raise(new Rational(3));
     }
 
@@ -589,6 +746,7 @@ public final class Functions {
 
 
     public static Number factorial(Number x) {
+        x = value(x);
         if(x instanceof Vector v)
             return v.derive(Functions::factorial);
         double xd = x.toDouble();
@@ -603,24 +761,29 @@ public final class Functions {
     }
 
     public static Number binCoeff(Number n, Number k) {
+        n = value(n);
+        k = value(k);
         return factorial(n).divide(factorial(k).multiply(factorial(n.subtract(k))));
     }
 
 
 
     public static Number sum(SymbolLookup c, Number low, Number high, Number f) {
-        if(low instanceof Expression.Function lowF)
-            return lowF.derive(SIGMA, "sum($x,"+high+","+f+")", PRE, l -> sum(c, l, high, f));
-        if(high instanceof Expression.Function highF)
-            return highF.derive(SIGMA, "sum("+low+",$x,"+f+")", PRE, h -> sum(c, low, h, f));
-        if(low instanceof Vector lowV) {
-            if(high instanceof Vector highV)
-                return lowV.derive(highV, (l, h) -> sum(c,l,h,f));
-            return lowV.derive(l -> sum(c, l, high, f));
+        Number _low = value(low);
+        Number _high = value(high);
+        Number _f = value(f);
+        if(_low instanceof Expression.Function lowF)
+            return lowF.derive(SIGMA, "sum($x,"+_high+","+_f+")", PRE, l -> sum(c, l, _high, _f));
+        if(_high instanceof Expression.Function highF)
+            return highF.derive(SIGMA, "sum("+_low+",$x,"+_f+")", PRE, h -> sum(c, _low, h, _f));
+        if(_low instanceof Vector lowV) {
+            if(_high instanceof Vector highV)
+                return lowV.derive(highV, (l, h) -> sum(c,l,h,_f));
+            return lowV.derive(l -> sum(c, l, _high, _f));
         }
-        if(high instanceof Vector highV)
-            return highV.derive(h -> sum(c, low, h, f));
-        return sum(c, low, high, f instanceof Expression.Function ff ? ff : new HardcodedFunction("_f", "_", l -> f));
+        if(_high instanceof Vector highV)
+            return highV.derive(h -> sum(c, _low, h, _f));
+        return sum(c, _low, _high, _f instanceof Expression.Function ff ? ff : new HardcodedFunction("_f", "_", l -> _f));
     }
 
     private static Number sum(SymbolLookup c, Number low, Number high, Expression.Function f) {
@@ -634,18 +797,21 @@ public final class Functions {
 
 
     public static Number product(SymbolLookup e, Number low, Number high, Number f) {
-        if(low instanceof Expression.Function lowF)
-            return lowF.derive(PI, "product($x,"+high+","+f+")", PRE, l -> product(e, l, high, f));
-        if(high instanceof Expression.Function highF)
-            return highF.derive(PI, "product("+low+",$x,"+f+")", PRE, h -> product(e, low, h, f));
-        if(low instanceof Vector lowV) {
-            if(high instanceof Vector highV)
-                return lowV.derive(highV, (l, h) -> product(e,l,h,f));
-            return lowV.derive(l -> product(e, l, high, f));
+        Number _low = value(low);
+        Number _high = value(high);
+        Number _f = value(f);
+        if(_low instanceof Expression.Function lowF)
+            return lowF.derive(PI, "product($x,"+_high+","+f+")", PRE, l -> product(e, l, _high, _f));
+        if(_high instanceof Expression.Function highF)
+            return highF.derive(PI, "product("+_low+",$x,"+_f+")", PRE, h -> product(e, _low, h, _f));
+        if(_low instanceof Vector lowV) {
+            if(_high instanceof Vector highV)
+                return lowV.derive(highV, (l, h) -> product(e,l,h,_f));
+            return lowV.derive(l -> product(e, l, _high, _f));
         }
-        if(high instanceof Vector highV)
-            return highV.derive(h -> product(e, low, h, f));
-        return product(e, low, high, f instanceof Expression.Function ff ? ff : new HardcodedFunction("_f", "_", l -> f));
+        if(_high instanceof Vector highV)
+            return highV.derive(h -> product(e, _low, h, _f));
+        return product(e, _low, _high, _f instanceof Expression.Function ff ? ff : new HardcodedFunction("_f", "_", l -> _f));
     }
 
     private static Number product(SymbolLookup c, Number low, Number high, Expression.Function f) {
@@ -667,18 +833,20 @@ public final class Functions {
     }
 
     private static Number derivative(SymbolLookup lookup, Polynom polynom, Number degree, Number indeterminant) {
+        Number deg = value(degree);
+        Number ind = value(indeterminant);
         if(degree instanceof Vector v)
-            return v.derive(c -> derivative(lookup, polynom, c, indeterminant));
-        if(indeterminant instanceof Vector v)
-            return v.derive(c -> derivative(lookup, polynom, degree, c));
-        if(degree instanceof Expression.Function f)
-            return f.derive("derivative", "($x)/d("+indeterminant+")", PRE, c -> derivative(lookup, polynom, c, indeterminant));
-        if(indeterminant instanceof Expression.Function f)
-            return f.derive("derivative", "($x)/d("+indeterminant+")", PRE, c -> derivative(lookup, polynom, degree, c));
+            return v.derive(c -> derivative(lookup, polynom, c, ind));
+        if(ind instanceof Vector v)
+            return v.derive(c -> derivative(lookup, polynom, deg, c));
+        if(deg instanceof Expression.Function f)
+            return f.derive("derivative", "($x)/d("+ind+")", PRE, c -> derivative(lookup, polynom, c, ind));
+        if(ind instanceof Expression.Function f)
+            return f.derive("derivative", "($x)/d("+ind+")", PRE, c -> derivative(lookup, polynom, deg, c));
         int n;
-        if(degree == SymbolLookup.UNSPECIFIED) n = 1;
+        if(deg == SymbolLookup.UNSPECIFIED) n = 1;
         else {
-            double dn = degree.toDouble(lookup);
+            double dn = deg.toDouble(lookup);
             if(dn != (int) dn)
                 throw new ArithmeticException("Non-integer derivative degree");
             n = (int) dn;
@@ -730,5 +898,14 @@ public final class Functions {
         double dInd = indeterminant.toDouble(lookup);
         if(dInd != (int) dInd) throw new ArithmeticException("Non-integer indeterminant");
         return polynom.integrate((int) dInd, lookup, a, b);
+    }
+
+
+
+    @Contract(pure = true)
+    private static Number value(Number x) {
+        while(x instanceof Expression.Constant c)
+            x = c.value();
+        return x;
     }
 }

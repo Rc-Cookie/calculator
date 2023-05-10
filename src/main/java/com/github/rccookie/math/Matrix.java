@@ -136,10 +136,19 @@ public class Matrix implements Number {
         return rows.length == 1 && rows[0].length == 1;
     }
 
+    @Override
     public boolean isZero() {
         for(Number[] row : rows)
             for(Number n : row)
-                if(!n.equals(Number.ZERO())) return false;
+                if(!n.isZero()) return false;
+        return true;
+    }
+
+    @Override
+    public boolean isOne() {
+        for(Number[] row : rows)
+            for(Number n : row)
+                if(!n.isOne()) return false;
         return true;
     }
 

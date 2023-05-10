@@ -241,9 +241,17 @@ public class Vector implements Number {
         return x instanceof Vector v ? v.size() : 1;
     }
 
+    @Override
     public boolean isZero() {
         for(Number c : components)
-            if(!c.equals(Number.ZERO())) return false;
+            if(!c.isZero()) return false;
+        return true;
+    }
+
+    @Override
+    public boolean isOne() {
+        for(Number c : components)
+            if(!c.isOne()) return false;
         return true;
     }
 

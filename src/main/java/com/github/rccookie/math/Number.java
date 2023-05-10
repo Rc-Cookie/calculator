@@ -46,6 +46,11 @@ public interface Number extends JsonSerializable {
     }
 
 
+    boolean isZero();
+
+    boolean isOne();
+
+
     @NotNull
     Number add(Number x);
 

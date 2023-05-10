@@ -27,6 +27,20 @@ record NumbersImpl(Expression... elements) implements Expression.Numbers {
         return Arrays.stream(elements).map(e -> e.toString(precedence(), false)).collect(Collectors.joining(", "));
     }
 
+    @Override
+    public boolean isZero() {
+        for(Expression e : elements)
+            if(!e.isZero()) return false;
+        return true;
+    }
+
+    @Override
+    public boolean isOne() {
+        for(Expression e : elements)
+            if(!e.isOne()) return false;
+        return true;
+    }
+
     @NotNull
     @Override
     public Iterator<Expression> iterator() {

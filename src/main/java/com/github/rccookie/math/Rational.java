@@ -200,6 +200,16 @@ public class Rational implements SimpleNumber {
     }
 
     @Override
+    public boolean isZero() {
+        return n.signum() == 0;
+    }
+
+    @Override
+    public boolean isOne() {
+        return n.equals(BigInteger.ONE) && d.equals(BigInteger.ONE);
+    }
+
+    @Override
     public double toDouble(SymbolLookup lookup) {
         return new BigDecimal(n).divide(new BigDecimal(d), new MathContext(20, RoundingMode.HALF_UP)).doubleValue();
     }
