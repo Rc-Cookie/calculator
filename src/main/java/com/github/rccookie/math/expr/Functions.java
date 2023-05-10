@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.function.BinaryOperator;
 
 import com.github.rccookie.math.BigDecimalMath;
@@ -75,6 +76,7 @@ public final class Functions {
 
     public static final Expression.Function REDUCE = new HardcodedFunction("reduce", Functions::gaussReduction);
     public static final Expression.Function GAUSS = new HardcodedFunction("gauss", Functions::gauss);
+    public static final Expression.Function RANK = new HardcodedFunction("rank", Functions::rank);
 
     private static final Number LN_2 = ln(new Rational(2));
 
@@ -599,7 +601,8 @@ public final class Functions {
 
         Number[] solution = new LinearEquationSystem(width, arr).solve()[0];
         for(int i=0; i<solution.length; i++)
-            if(solution[i] == null) solution[i] = Expression.WILDCARD();
+            if(solution[i] == null)
+                solution[i] = new RuntimeFunction(Expression.Symbol.of("x"+i), "x"+i);
         return new Vector(solution);
     }
 
@@ -640,20 +643,35 @@ public final class Functions {
         if(m instanceof Expression.Function f)
             return f.derive("reduce", "reduce($x)", PRE, Functions::homogenousGaussReduction);
 
+        LinearEquationSystem solution = toLinearEquations(m, "gauss reduction").toReducedEchelonForm();
+        Vector[] rows = new Vector[solution.rowCount()];
+        for(int i=0; i<rows.length; i++)
+            rows[i] = new Vector(solution.getRow(i));
+        return new Vector(rows);
+    }
+
+
+    public static Number rank(Number x) {
+        x = value(x);
+        if(x instanceof Expression.Function f)
+            return f.derive("rank", "rank($x)", PRE, Functions::rank);
+
+        LinearEquationSystem system = toLinearEquations(x, "rank");
+        Number[] solution = system.solve()[0];
+        return new Rational(Arrays.stream(solution).filter(Objects::nonNull).count());
+    }
+
+    private static LinearEquationSystem toLinearEquations(Number m, String task) {
         Vector mv = Vector.asVector(m);
         if(!mv.isMatrix())
-            throw new MathEvaluationException("Matrix expected for gauss reduction");
+            throw new MathEvaluationException("Matrix expected for "+task);
 
         int height = mv.rowCount(), width = mv.columnCount();
         Number[][] arr = new Number[height][width];
         for(int i=0; i<height; i++) for(int j=0; j<width; j++)
             arr[i][j] = mv.get(i,j);
 
-        LinearEquationSystem solution = new LinearEquationSystem(width, arr).toReducedEchelonForm();
-        Vector[] rows = new Vector[height];
-        for(int i=0; i<height; i++)
-            rows[i] = new Vector(solution.getRow(i));
-        return new Vector(rows);
+        return new LinearEquationSystem(width, arr);
     }
 
 
