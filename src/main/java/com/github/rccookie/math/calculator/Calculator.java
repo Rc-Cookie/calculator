@@ -15,16 +15,15 @@ import com.github.rccookie.json.Json;
 import com.github.rccookie.json.JsonDeserialization;
 import com.github.rccookie.json.JsonObject;
 import com.github.rccookie.json.JsonSerializable;
-import com.github.rccookie.math.Complex;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
-import com.github.rccookie.math.SimpleNumber;
 import com.github.rccookie.math.expr.DefaultSymbolLookup;
 import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.Functions;
 import com.github.rccookie.math.expr.MathEvaluationException;
 import com.github.rccookie.math.expr.MathExpressionSyntaxException;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.util.Args;
 import com.github.rccookie.util.ArgsParser;
 import com.github.rccookie.util.Arguments;
@@ -48,7 +47,7 @@ public class Calculator implements JsonSerializable {
     /**
      * Version of this calculator API.
      */
-    public static final Version VERSION = new Version(2, 11, 0);
+    public static final Version VERSION = new Version(2, 12, 0);
 
     static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
     private static final Path RECENT_STATE_DIR = Path.of(STATE_STORE_DIR, "_recent");
@@ -102,6 +101,7 @@ public class Calculator implements JsonSerializable {
             "log", Functions.LOG,
             "vec", Functions.VECTOR,
             "mat", Functions.MATRIX,
+            "idm", Functions.IDENTITY_MATRIX,
             "get", Functions.GET,
             "size", Functions.SIZE,
             "norm", Functions.NORMALIZE,
@@ -156,6 +156,11 @@ public class Calculator implements JsonSerializable {
         cmds.put("load", Commands.LOAD);
         cmds.put("store", Commands.STORE);
         cmds.put("restore", Commands.RESTORE);
+        cmds.put("inline", Commands.INLINE);
+        cmds.put("ascii", Commands.ASCII);
+        cmds.put("unicode", Commands.UNICODE);
+        cmds.put("latex", Commands.LATEX);
+        cmds.put("mathml", Commands.MATHML);
         DEFAULT_COMMANDS = Utils.view(cmds);
     }
 
@@ -347,7 +352,7 @@ public class Calculator implements JsonSerializable {
             else {
                 moreCount = 0;
                 Number res = evaluateSmart(expr);
-                printRes(res, null);
+                printRes(res, null, null);
             }
         } catch(MathExpressionSyntaxException e) {
             System.err.println("Illegal expression: " + e.getMessage());
@@ -558,7 +563,7 @@ public class Calculator implements JsonSerializable {
      * @param res The number to display
      * @param mode A display mode override, or <code>null</code> to use the default
      */
-    protected void printRes(Number res, Rational.ToStringMode mode) {
+    protected void printRes(Number res, RenderableExpression.RenderOptions.DecimalMode mode, OutputMode renderMode) {
         runWithSettings(() -> {
             Number n = res;
             while (n instanceof Expression.Function f && f.paramCount() == 0) try {
@@ -571,21 +576,33 @@ public class Calculator implements JsonSerializable {
                 break;
             }
 
-            if(n instanceof Expression && !(n instanceof Expression.Numbers))
-                System.out.print(n);
-            else if(n instanceof Rational r) {
-                Rational.DetailedToString str = mode != null ? r.detailedToString(mode) : r.detailedToString();
-                System.out.print(str.precise() ? '=' : ABOUT_EQUAL);
-                System.out.print(' ');
-                if(str.precise() && !str.isFull()) {
-                    int index = str.str().indexOf("\u00B7");
-                    if(index == -1) System.out.print(str.str() + "...");
-                    else System.out.print(str.str().substring(0, index) + "..." + str.str().substring(index));
-                } else System.out.print(str.str());
-            } else if(n instanceof SimpleNumber sn && !sn.precise() || n instanceof Complex c && !c.precise())
-                System.out.print(ABOUT_EQUAL + " " + n);
-            else System.out.print("= " + n);
-            System.out.println();
+//            if(n instanceof Expression && !(n instanceof Expression.Numbers))
+//                System.out.print(n);
+//            else if(n instanceof Rational r) {
+//                Rational.DetailedToString str = mode != null ? r.detailedToString(mode) : r.detailedToString();
+//                System.out.print(str.precise() ? '=' : ABOUT_EQUAL);
+//                System.out.print(' ');
+//                if(str.precise() && !str.isFull()) {
+//                    int index = str.str().indexOf("\u00B7");
+//                    if(index == -1) System.out.print(str.str() + "...");
+//                    else System.out.print(str.str().substring(0, index) + "..." + str.str().substring(index));
+//                } else System.out.print(str.str());
+//            } else if(n instanceof SimpleNumber sn && !sn.precise() || n instanceof Complex c && !c.precise())
+//                System.out.print(ABOUT_EQUAL + " " + n);
+//            else System.out.print("= " + n);
+//            System.out.println();
+            int precision = Rational.getPrecision();
+            RenderableExpression.RenderOptions.DecimalMode m = mode != null ? mode : switch(Rational.getToStringMode()) {
+                case FORCE_DECIMAL, FORCE_DECIMAL_SCIENTIFIC -> RenderableExpression.RenderOptions.DecimalMode.FORCE_DECIMAL;
+                case FORCE_FRACTION, FORCE_FRACTION_SCIENTIFIC -> RenderableExpression.RenderOptions.DecimalMode.FORCE_FRACTION;
+                case SMART, SMART_SCIENTIFIC -> RenderableExpression.RenderOptions.DecimalMode.SMART;
+                default -> RenderableExpression.RenderOptions.DecimalMode.DECIMAL_IF_POSSIBLE;
+            };
+            System.out.println((renderMode != null ? renderMode : OutputMode.UNICODE).renderToString(res.toRenderable(), new RenderableExpression.RenderOptions(
+                    precision,
+                    m,
+                    scientificNotation
+            )));
         });
     }
 

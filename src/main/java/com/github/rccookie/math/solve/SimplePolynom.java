@@ -10,7 +10,10 @@ import java.util.stream.Stream;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.util.Arguments;
+
+import static com.github.rccookie.math.rendering.RenderableExpression.*;
 
 record SimplePolynom(String indeterminant, Expression... coefficients) implements Polynom {
 
@@ -64,6 +67,20 @@ record SimplePolynom(String indeterminant, Expression... coefficients) implement
                 .collect(Collectors.joining(" + "));
     }
 
+    @Override
+    public RenderableExpression toRenderable() {
+        if(coefficients.length == 1 && coefficients[0].equals(Number.ZERO()))
+            return infix(arrow(true, false), RenderableExpression.name(indeterminant), num(0));
+
+        return infix(arrow(true, false),
+                RenderableExpression.name(indeterminant),
+                Stream.iterate(coefficients.length-1, i->i-1)
+                        .limit(coefficients.length)
+                        .map(this::renderCoeff)
+                        .filter(Objects::nonNull)
+                        .reduce(RenderableExpression::plus).get());
+    }
+
     private String coeffToString(int coeff) {
         Expression c = coefficients[coeff];
         if(c.equals(Number.ZERO())) return null;
@@ -80,6 +97,36 @@ record SimplePolynom(String indeterminant, Expression... coefficients) implement
             else if(coeff != 1) str += "^" + coeff;
         }
         return str;
+    }
+
+    private RenderableExpression renderCoeff(int coeff) {
+        Expression c = coefficients[coeff];
+        if(c.equals(Number.ZERO())) return null;
+
+        RenderableExpression coefficient = null;
+        if(coeff == 0 || !c.equals(Number.ONE())) {
+            coefficient = c.toRenderable();
+            if(!(c instanceof Constant)) coefficient = par(coefficient);
+        }
+        if(coeff == 0) return coefficient == null ? num(1) : coefficient;
+        if(coeff == 1) return coefficient == null ? RenderableExpression.name(indeterminant) : mult(coefficient, RenderableExpression.name(indeterminant));
+        if(coefficient == null) return pow(RenderableExpression.name(indeterminant), num(coeff));
+        return mult(coefficient, pow(RenderableExpression.name(indeterminant), num(coeff)));
+
+
+//        String str = "";
+//        if(coeff == 0 || !c.equals(Number.ONE())) {
+//            if(c instanceof Constant)
+//                str = c.toString();
+//            else str = "(" + c + ")";
+//        }
+//        if(coeff != 0) {
+//            str += indeterminant;
+//            if(coeff == 2) str += '\u00B2';
+//            else if(coeff == 3) str += '\u00B3';
+//            else if(coeff != 1) str += "^" + coeff;
+//        }
+//        return str;
     }
 
     @Override

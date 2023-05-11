@@ -1,6 +1,11 @@
 package com.github.rccookie.math.expr;
 
+import java.util.Arrays;
+
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
+
+import static com.github.rccookie.math.rendering.RenderableExpression.*;
 
 record FunctionDefinition(String name, Expression signature, Function function)
         implements Expression.BinaryOperation {
@@ -45,6 +50,10 @@ record FunctionDefinition(String name, Expression signature, Function function)
         return format(name + '(' + String.join(",", function.paramNames()) + ") := $x", function.expr());
     }
 
+    @Override
+    public RenderableExpression toRenderable() {
+        return def(call(name, Arrays.stream(function.paramNames()).map(RenderableExpression::name).toArray(RenderableExpression[]::new)), function.expr().toRenderable());
+    }
 
     private static String parseName(Expression signature) {
         if(!(signature instanceof ImplicitOperation o) || !(o.a() instanceof Symbol s))

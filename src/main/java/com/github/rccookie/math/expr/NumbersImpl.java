@@ -6,9 +6,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.util.Utils;
 
 import org.jetbrains.annotations.NotNull;
+
+import static com.github.rccookie.math.rendering.RenderableExpression.*;
 
 record NumbersImpl(Expression... elements) implements Expression.Numbers {
 
@@ -25,6 +28,12 @@ record NumbersImpl(Expression... elements) implements Expression.Numbers {
     public String toString() {
         if(elements.length == 0) return "()";
         return Arrays.stream(elements).map(e -> e.toString(precedence(), false)).collect(Collectors.joining(", "));
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        if(elements.length == 0) return par(text(""));
+        return list(Arrays.stream(elements).map(e -> e.toRenderable(precedence(), true)).toArray(RenderableExpression[]::new));
     }
 
     @Override

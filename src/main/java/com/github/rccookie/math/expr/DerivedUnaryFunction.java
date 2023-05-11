@@ -3,10 +3,12 @@ package com.github.rccookie.math.expr;
 import java.util.function.UnaryOperator;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record DerivedUnaryFunction(
         String name,
         String format,
+        UnaryOperator<RenderableExpression> renderer,
         Expression.Function function,
         int opPrecedence,
         UnaryOperator<Number> operator) implements Expression.UnaryFunctionOperation {
@@ -42,6 +44,11 @@ record DerivedUnaryFunction(
     }
 
     @Override
+    public RenderableExpression toRenderable() {
+        return new RuntimeFunction(expr(), paramNames()).toRenderable();
+    }
+
+    @Override
     public Expression expr() {
         return new Body();
     }
@@ -56,7 +63,7 @@ record DerivedUnaryFunction(
         Function simplified = function.simplify();
         if(simplified instanceof Constant n)
             return new RuntimeFunction(Expression.of(operator.apply(n.value())), paramNames());
-        return new DerivedUnaryFunction(name, format, simplified, opPrecedence, operator);
+        return new DerivedUnaryFunction(name, format, renderer, simplified, opPrecedence, operator);
     }
 
     private final class Body implements Expression {
@@ -94,6 +101,11 @@ record DerivedUnaryFunction(
         @Override
         public String toString() {
             return format(format, function.expr());
+        }
+
+        @Override
+        public RenderableExpression toRenderable() {
+            return toRenderable(renderer, function.expr());
         }
     }
 }

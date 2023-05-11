@@ -2,10 +2,15 @@ package com.github.rccookie.math.solve;
 
 import java.util.Arrays;
 
+import com.github.rccookie.math.Matrix;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
+import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.util.Arguments;
 import com.github.rccookie.util.Console;
+import com.github.rccookie.util.Utils;
+
+import org.jetbrains.annotations.Nullable;
 
 public final class LinearEquationSystem {
 
@@ -14,15 +19,28 @@ public final class LinearEquationSystem {
 
 
     public LinearEquationSystem(int unknowns, Number[]... rows) {
-        if(Arguments.checkNull(rows, "rows").length == 0)
+        if(Arguments.checkNull(rows, "columns").length == 0)
             throw new IllegalArgumentException("At least one row expected");
         this.rows = new Number[rows.length][];
         for(int i=0; i<rows.length; i++) {
-            this.rows[i] = Arguments.deepCheckNull(rows[i], "rows["+i+"]").clone();
+            this.rows[i] = Arguments.deepCheckNull(rows[i], "columns["+i+"]").clone();
             if(rows[i].length != rows[1].length) throw new IllegalArgumentException("Rows have different number of elements");
         }
         if(rows[0].length == 0) throw new IllegalArgumentException("Rows cannot be empty");
         this.unknowns = Arguments.checkRange(unknowns, 1, rows[0].length + 1);
+    }
+
+    public LinearEquationSystem(Matrix left, @Nullable Matrix right) {
+        unknowns = Arguments.checkNull(left, "left").columnCount();
+        rows = new Number[left.rowCount()][unknowns + (right != null ? right.columnCount() : 0)];
+        Number[][] leftRows = left.rows();
+        for(int i=0; i<rows.length; i++)
+            System.arraycopy(leftRows[i], 0, rows[i], 0, unknowns);
+        if(right != null) {
+            Number[][] rightRows = right.rows();
+            for(int i=0; i<rows.length; i++)
+                System.arraycopy(rightRows[i], 0, rows[i], unknowns, rightRows[i].length);
+        }
     }
 
     private LinearEquationSystem(boolean ignored, int unknowns, Number[][] rows) {
@@ -52,45 +70,18 @@ public final class LinearEquationSystem {
         return str.append("]").toString();
     }
 
-    public String toMatrixString() {
-        if(rows.length == 1) {
-            StringBuilder str = new StringBuilder("[");
-            for(int j=0; j<unknowns; j++) {
-                if(j != 0) str.append(", ");
-                str.append(rows[0][j]);
-            }
-            return str.append("]").toString();
-        }
-
-        StringBuilder[] rows = new StringBuilder[this.rows.length];
+    public RenderableExpression toRenderable() {
+        if(isHomogenous())
+            return RenderableExpression.matrix(Arrays.stream(rows).map(r -> Arrays.stream(r).map(Number::toRenderable).toArray(RenderableExpression[]::new)).toArray(RenderableExpression[]::new));
+        RenderableExpression[][] a = new RenderableExpression[rows.length][unknowns],
+                b = new RenderableExpression[rows.length][rows[0].length - unknowns];
         for(int i=0; i<rows.length; i++) {
-            if(i == 0) rows[i] = new StringBuilder("\u250C ");
-            else if(i == rows.length-1) rows[i] = new StringBuilder("\u2514 ");
-            else rows[i] = new StringBuilder("\u2502 ");
+            for(int j=0; j<unknowns; j++)
+                a[i][j] = rows[i][j].toRenderable();
+            for(int j=unknowns; j<rows[i].length; j++)
+                b[i][j-unknowns] = rows[i][j].toRenderable();
         }
-
-        for(int j=0; j<this.rows[0].length; j++) {
-            String[] column = new String[rows.length];
-            for(int i=0; i<rows.length; i++)
-                column[i] = this.rows[i][j].toString();
-            int width = Arrays.stream(column).mapToInt(String::length).max().getAsInt();
-
-            for(int i=0; i<rows.length; i++) {
-                String prefix = j == 0 ? "" : j == unknowns ? (i == 0 ? " \u2577 " : i == rows.length-1 ? " \u2575 " : " \u2502 ") : " ";
-                rows[i].append(prefix)
-                        .append(" ".repeat((width - column[i].length() + 1) / 2))
-                        .append(column[i])
-                        .append(" ".repeat((width - column[i].length()) / 2));
-            }
-        }
-
-        for(int i=0; i<rows.length; i++) {
-            if(i == 0) rows[i].append(" \u2510");
-            else if(i == rows.length-1) rows[i].append(" \u2518");
-            else rows[i].append(" \u2502");
-        }
-
-        return String.join("\n", rows);
+        return RenderableExpression.augMatrix(RenderableExpression.grid(a), RenderableExpression.grid(b));
     }
 
     public int rowCount() {
@@ -188,25 +179,28 @@ public final class LinearEquationSystem {
 
         LinearEquationSystem out = copy();
         int startI = 0;
+
+        Console.split("toEchelonForm");
+        Console.debug(out.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         for(int j=0; j<unknowns; j++) {
 
-            // Move rows with zeros to bottom
+            // Move columns with zeros to bottom
             int endI = rows.length;
             for(int i=startI; i<endI; i++)
                 if(out.rows[i][j].isZero())
                     out.swapInplace(i--, --endI);
 
-            // All relevant rows have zeros in this column?
+            // All relevant columns have zeros in this columns?
             if(endI == startI) continue;
 
-            // Find row with the greatest coefficient in column and move to top, for stability purposes
+            // Find row with the greatest coefficient in columns and move to top, for stability purposes
             int max = startI;
             for(int i=startI+1; i<endI; i++)
                 if(out.rows[i][j].greaterThan(out.rows[i][j]).isOne())
                     max = i;
             out.swapInplace(startI, max);
 
-            // Subtract selected row from all rows below to produce zeros in this column
+            // Subtract selected row from all columns below to produce zeros in this columns
             for(int i=startI+1; i<endI; i++) {
                 Number factor = out.rows[i][j].divide(out.rows[startI][j]);
                 out.rows[i][j] = Number.ZERO();
@@ -216,6 +210,8 @@ public final class LinearEquationSystem {
 
             // The row added to the others is irrelevant now
             startI++;
+
+            Console.debug(out.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         }
         return out;
     }
@@ -226,6 +222,8 @@ public final class LinearEquationSystem {
 
         LinearEquationSystem out = toEchelonForm().copy();
 
+        Console.split("toReducedEchelonForm");
+        Console.debug(out.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         for(int i=rows.length-1; i>=0; i--) {
 
             // Find non-zero start of row
@@ -247,12 +245,14 @@ public final class LinearEquationSystem {
             for(int j2=unknowns; j2<rows[0].length; j2++)
                 out.rows[i][j2] = out.rows[i][j2].divide(out.rows[i][j]);
             out.rows[i][j] = Number.ONE();
+
+            Console.debug(out.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         }
 
         return out;
     }
 
-    public Number[][] solve() {
+    public Result solve() {
         LinearEquationSystem s = toReducedEchelonForm();
 
         Number[][] solutions = new Number[Math.max(1, rows[0].length - unknowns)][rows.length];
@@ -264,15 +264,16 @@ public final class LinearEquationSystem {
                     break;
                 }
             }
-            if(zero) return solutions; // All lower rows are zeros too, so those variables are all unbound
+            if(zero) return new Result(solutions); // All lower columns are zeros too, so those variables are all unbound
 
             if(isHomogenous())
                 solutions[0][i] = Number.ZERO();
             else for(int j=0; j<solutions.length; j++)
                 solutions[j][i] = s.rows[i][j+unknowns];
         }
-        return solutions;
+        return new Result(solutions);
     }
+
 
 
     private LinearEquationSystem copy() {
@@ -290,17 +291,40 @@ public final class LinearEquationSystem {
         for(int i=0; i<rows.length; i++) for(int j=0; j<rows[0].length; j++)
             rows[i][j] = new Rational(lRows[i][j]);
         LinearEquationSystem lgs = new LinearEquationSystem(3, rows);
-        Console.log(lgs.toMatrixString());
+        Console.log(lgs.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         Console.log(lgs.isEchelonForm(), lgs.isReducedEchelonForm());
 
         LinearEquationSystem zsf = lgs.toEchelonForm();
-        Console.log(zsf.toMatrixString());
+        Console.log(zsf.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         Console.log(zsf.isEchelonForm(), zsf.isReducedEchelonForm());
 
         LinearEquationSystem rzsf = zsf.toReducedEchelonForm();
-        Console.log(rzsf.toMatrixString());
+        Console.log(rzsf.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         Console.log(rzsf.isEchelonForm(), rzsf.isReducedEchelonForm());
 
         Console.log((Object) rzsf.solve());
+    }
+
+
+
+    public record Result(Number[][] columns) {
+
+        @Override
+        public Number[][] columns() {
+            return Utils.deepClone(columns);
+        }
+
+        public Number[][] rows() {
+            Number[][] rows = new Number[columns[0].length][columns.length];
+            for(int i=0; i<rows.length; i++) for(int j=0; j<rows[i].length; j++)
+                rows[i][j] = columns[j][i];
+            return rows;
+        }
+
+        public Number[] getHomogenousResult() {
+            if(columns.length != 1)
+                throw new IllegalStateException("Not result of an homogenous equation system");
+            return columns[0];
+        }
     }
 }

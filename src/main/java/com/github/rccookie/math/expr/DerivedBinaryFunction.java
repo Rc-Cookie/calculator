@@ -3,10 +3,13 @@ package com.github.rccookie.math.expr;
 import java.util.function.BinaryOperator;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record DerivedBinaryFunction(
         String name,
         String format,
+        BinaryOperator<RenderableExpression> renderer,
+        boolean fIsLeft,
         Expression.Function function,
         Expression b,
         int opPrecedence,
@@ -44,6 +47,11 @@ record DerivedBinaryFunction(
     }
 
     @Override
+    public RenderableExpression toRenderable() {
+        return new RuntimeFunction(expr(), paramNames()).toRenderable();
+    }
+
+    @Override
     public Expression expr() {
         return new Body();
     }
@@ -60,9 +68,9 @@ record DerivedBinaryFunction(
         if(fs.expr() instanceof Constant fn) {
             if(bs instanceof Constant bn)
                 return new RuntimeFunction(Expression.of(operator.apply(fn.value(), bn.value())), paramNames());
-            return new RuntimeFunction(new SimpleBinaryOperation(name, format, fn, bs, opPrecedence, operator), paramNames());
+            return new RuntimeFunction(new SimpleBinaryOperation(name, format, renderer, fIsLeft, fn, bs, opPrecedence, operator), paramNames());
         }
-        return new DerivedBinaryFunction(name, format, fs, bs, opPrecedence, operator);
+        return new DerivedBinaryFunction(name, format, renderer, fIsLeft, fs, bs, opPrecedence, operator);
     }
 
     private final class Body implements Expression {
@@ -100,6 +108,11 @@ record DerivedBinaryFunction(
         @Override
         public String toString() {
             return format(format, function.expr(), b);
+        }
+
+        @Override
+        public RenderableExpression toRenderable() {
+            return toRenderable(renderer, fIsLeft, function.expr(), b);
         }
     }
 }

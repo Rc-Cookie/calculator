@@ -1,6 +1,7 @@
 package com.github.rccookie.math.expr;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record FunctionCall(Expression function, Expression params)
         implements Expression.ImplicitOperation {
@@ -8,6 +9,11 @@ record FunctionCall(Expression function, Expression params)
     @Override
     public String toString() {
         return format("$x(" + params + ")", function);
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return toRenderable(f -> RenderableExpression.call(f, params.toRenderable()), function);
     }
 
     @Override

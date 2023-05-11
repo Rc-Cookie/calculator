@@ -80,7 +80,7 @@ public enum SiUnit {
         }
         int prefixScale = scale > 0 ?
                 Math.min((scale / 3) * 3, 24) :
-                Math.max(Math.ceilDiv(-scale, 3) * -3, -24);
+                Math.max((-scale+2) / 3 * -3, -24);
         str.append(PREFIXES.get(prefixScale)).append(symbol);
         return scale - prefixScale;
     }

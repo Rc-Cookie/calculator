@@ -12,6 +12,7 @@ import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.MathEvaluationException;
 import com.github.rccookie.math.expr.MathExpressionSyntaxException;
+import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.util.Arguments;
 import com.github.rccookie.util.Console;
 import com.github.rccookie.util.Utils;
@@ -105,7 +106,7 @@ public final class Commands {
                 Number res = c.variables().get("ans");
                 int precision = Rational.getPrecision();
                 Rational.setPrecision(precision << c.moreCount);
-                c.printRes(res, null);
+                c.printRes(res, null, null);
                 Rational.setPrecision(precision);
             }
     );
@@ -116,7 +117,7 @@ public final class Commands {
             "Display the last result as fraction",
             (c,args) -> {
                 Number res = c.variables().get("ans");
-                c.printRes(res, Rational.ToStringMode.FORCE_FRACTION);
+                c.printRes(res, RenderableExpression.RenderOptions.DecimalMode.FORCE_FRACTION, null);
             }
     );
     /**
@@ -126,7 +127,57 @@ public final class Commands {
             "Display the last result as decimal",
             (c,args) -> {
                 Number res = c.variables().get("ans");
-                c.printRes(res, Rational.ToStringMode.FORCE_DECIMAL);
+                c.printRes(res, RenderableExpression.RenderOptions.DecimalMode.FORCE_DECIMAL, null);
+            }
+    );
+    /**
+     * Displays the last result as inline math expression.
+     */
+    public static final Command INLINE = new LambdaCommand(
+            "Display the last result as inline math expression",
+            (c,args) -> {
+                Number res = c.variables().get("ans");
+                c.printRes(res, null, OutputMode.INLINE);
+            }
+    );
+    /**
+     * Displays the last result as ascii art.
+     */
+    public static final Command ASCII = new LambdaCommand(
+            "Display the last result as ascii art",
+            (c,args) -> {
+                Number res = c.variables().get("ans");
+                c.printRes(res, null, OutputMode.ASCII);
+            }
+    );
+    /**
+     * Displays the last result as unicode ascii art.
+     */
+    public static final Command UNICODE = new LambdaCommand(
+            "Display the last result as unicode ascii art",
+            (c,args) -> {
+                Number res = c.variables().get("ans");
+                c.printRes(res, null, OutputMode.UNICODE);
+            }
+    );
+    /**
+     * Displays the last result as latex source code.
+     */
+    public static final Command LATEX = new LambdaCommand(
+            "Display the last result as latex source code",
+            (c,args) -> {
+                Number res = c.variables().get("ans");
+                c.printRes(res, null, OutputMode.LATEX);
+            }
+    );
+    /**
+     * Displays the last result as MathML source.
+     */
+    public static final Command MATHML = new LambdaCommand(
+            "Display the last result as MathML source",
+            (c,args) -> {
+                Number res = c.variables().get("ans");
+                c.printRes(res, null, OutputMode.MATHML);
             }
     );
     /**

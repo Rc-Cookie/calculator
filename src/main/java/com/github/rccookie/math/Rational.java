@@ -9,6 +9,7 @@ import java.util.function.Function;
 import com.github.rccookie.json.JsonDeserialization;
 import com.github.rccookie.json.JsonObject;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.util.Arguments;
 
 import org.jetbrains.annotations.NotNull;
@@ -212,6 +213,11 @@ public class Rational implements SimpleNumber {
     @Override
     public double toDouble(SymbolLookup lookup) {
         return new BigDecimal(n).divide(new BigDecimal(d), new MathContext(20, RoundingMode.HALF_UP)).doubleValue();
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return RenderableExpression.num(n,d, precise);
     }
 
     @Override

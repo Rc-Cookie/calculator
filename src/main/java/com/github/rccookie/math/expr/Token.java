@@ -6,6 +6,7 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 sealed interface Token {
 
@@ -21,7 +22,7 @@ sealed interface Token {
     Operator DIVIDE    = new Operator("/", Precedence.DIVIDE, Expression::divide);
     Operator NEGATE    = new Operator("~", Precedence.NEGATE, Expression::negate);
     Operator POWER     = new Operator("^", Precedence.POWER, Expression::raise);
-    Operator FACTORIAL = new Operator("!", Precedence.FACTORIAL, x -> new SimpleUnaryOperation("!", "$x!", x, 40, Functions::factorial));
+    Operator FACTORIAL = new Operator("!", Precedence.FACTORIAL, x -> new SimpleUnaryOperation("!", "$x!", RenderableExpression::factorial, x, 40, Functions::factorial));
     Operator ABS       = new Operator("abs", -10, true, s -> new Abs(s.pop()));
 
     Operator DEGREE  = new Operator("\u00B0", Precedence.DEGREE, x -> x.multiply(Number.DEG_TO_RAD()));
@@ -85,6 +86,11 @@ sealed interface Token {
         @Override
         public String toString() {
             return name;
+        }
+
+        @Override
+        public RenderableExpression toRenderable() {
+            return RenderableExpression.name(name);
         }
 
         @Override

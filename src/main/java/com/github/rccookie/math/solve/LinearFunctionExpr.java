@@ -4,6 +4,7 @@ import com.github.rccookie.math.Number;
 import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.Precedence;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record LinearFunctionExpr(LinearFunction equation) implements Expression {
 
@@ -27,6 +28,11 @@ record LinearFunctionExpr(LinearFunction equation) implements Expression {
         if(!offset.equals(Number.ZERO()))
             str.append(" + ").append(offset);
         return str.toString();
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return null;
     }
 
     @Override

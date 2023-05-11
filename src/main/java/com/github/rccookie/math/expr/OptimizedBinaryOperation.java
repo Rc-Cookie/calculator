@@ -1,6 +1,7 @@
 package com.github.rccookie.math.expr;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 /**
  * First evaluates the first argument. If the evaluated number is equal to
@@ -37,6 +38,11 @@ record OptimizedBinaryOperation(BinaryOperation base, Number optimize)
     @Override
     public String toString() {
         return base.toString();
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return base.toRenderable();
     }
 
     @Override

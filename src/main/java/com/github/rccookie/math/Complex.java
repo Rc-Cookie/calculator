@@ -4,6 +4,7 @@ import com.github.rccookie.json.JsonDeserialization;
 import com.github.rccookie.json.JsonObject;
 import com.github.rccookie.math.expr.Functions;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -246,7 +247,10 @@ public class Complex implements Number {
         throw new ArithmeticException("Cannot convert complex to double");
     }
 
-
+    @Override
+    public RenderableExpression toRenderable() {
+        return RenderableExpression.plus(re.toRenderable(), im.toRenderable());
+    }
 
     public static Complex fromPolar(SimpleNumber theta) {
         return new Complex(Functions.cos(theta), Functions.sin(theta));

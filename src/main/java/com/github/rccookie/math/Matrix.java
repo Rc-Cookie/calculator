@@ -8,6 +8,7 @@ import com.github.rccookie.json.JsonArray;
 import com.github.rccookie.math.expr.MathEvaluationException;
 import com.github.rccookie.math.expr.SymbolLookup;
 import com.github.rccookie.math.expr.UnsupportedMathOperationException;
+import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.util.Arguments;
 
 import org.jetbrains.annotations.NotNull;
@@ -82,6 +83,18 @@ public class Matrix implements Number {
     }
 
     @Override
+    public RenderableExpression toRenderable() {
+        return RenderableExpression.brackets(toRenderableGrid());
+    }
+
+    public RenderableExpression toRenderableGrid() {
+        RenderableExpression[][] rows = new RenderableExpression[this.rows.length][this.rows[0].length];
+        for(int i=0; i<rows.length; i++) for(int j=0; j<rows[i].length; j++)
+            rows[i][j] = this.rows[i][j].toRenderable();
+        return RenderableExpression.grid(rows);
+    }
+
+    @Override
     public Object toJson() {
         return new JsonArray((Object[]) rows);
     }
@@ -93,7 +106,7 @@ public class Matrix implements Number {
     public int vectorSize() {
         if(rows.length == 1) return rows[0].length;
         if(rows[0].length == 1) return rows.length;
-        throw new MathEvaluationException("Matrix is not a row or column vector, cannot receive vector size");
+        throw new MathEvaluationException("Matrix is not a row or columns vector, cannot receive vector size");
     }
 
     public int rowCount() {
@@ -156,7 +169,7 @@ public class Matrix implements Number {
         if(rowIndex < 0)
             throw new MathEvaluationException("Matrix row out of lower bounds");
         if(columnIndex < 0)
-            throw new MathEvaluationException("Matrix column out of lower bounds");
+            throw new MathEvaluationException("Matrix columns out of lower bounds");
         if(rowIndex < rows.length && columnIndex < rows[0].length)
             return rows[rowIndex][columnIndex];
         return Number.ZERO();
@@ -167,7 +180,7 @@ public class Matrix implements Number {
             return vectorIndex < rows[0].length ? rows[0][vectorIndex] : Number.ZERO();
         if(rows[0].length == 0)
             return vectorIndex < rows.length ? rows[vectorIndex][0] : Number.ZERO();
-        throw new MathEvaluationException("Matrix is not a row or column vector, row and column required");
+        throw new MathEvaluationException("Matrix is not a row or columns vector, row and columns required");
     }
 
     public Number get(int row, int column) {
@@ -268,6 +281,38 @@ public class Matrix implements Number {
         return elements;
     }
 
+    public boolean isIdentity() {
+        if(!isQuadratic()) return false;
+        for(int i=0; i<rows.length; i++) for(int j=0; j<rows[i].length; j++)
+            if(!(i == j ? rows[i][j].isOne() : rows[i][j].isZero())) return false;
+        return true;
+    }
+
+    public boolean isEchelonForm() {
+        int left = -1;
+        for(Number[] row : rows) {
+            int j = 0;
+            for(; j<=Math.min(left, row.length); j++)
+                if(!row[j].isZero()) return false;
+            while(j < row.length && row[j].isZero()) j++;
+            left = j;
+        }
+        return true;
+    }
+
+    public boolean isReducedEchelonForm() {
+        if(!isEchelonForm()) return false;
+        for(int i=0; i<rows.length; i++) {
+            int j = 0;
+            while(j < rows[i].length && rows[i][j].isZero()) j++;
+            if(j == rows[i].length) break;
+            if(!rows[i][j].isOne()) return false;
+            for(int i2=0; i2<rows.length; i2++)
+                if(i != i2 && !rows[i2][j].isZero()) return false;
+        }
+        return true;
+    }
+
     public Number determinant() {
         if(!isQuadratic())
             throw new ArithmeticException("Non-square matrix does not have a determinant");
@@ -310,7 +355,7 @@ public class Matrix implements Number {
 
     @Override
     public @NotNull Number negate() {
-        return null;
+        return derive(Number::negate);
     }
 
     public @NotNull Matrix submatrixIndexed(int rowIndex, int columnIndex) {
@@ -342,7 +387,7 @@ public class Matrix implements Number {
         for(int i=0; i<subCache.length; i++)
             System.arraycopy(rows[i], 1, subCache[i], 0, subCache[0].length);
 
-        // Reuse matrix object by changing rows directly
+        // Reuse matrix object by changing columns directly
         Matrix sub = new Matrix(new Number[minor.length-1][]);
         for(int j=0; j<minor.length; j++) {
             // Fill sub matrix with cache skipping the first row (i=0)
@@ -353,7 +398,7 @@ public class Matrix implements Number {
                 if(i != minor.length-1)
                     sub.rows[i] = subCache[i];
             }
-            // Next time column j should not be skipped but j+1, which is currently at index j
+            // Next time columns j should not be skipped but j+1, which is currently at index j
             if(j != minor.length-1)
                 for(int i=0; i<subCache.length; i++)
                     subCache[i][j] = rows[i][j];
@@ -387,7 +432,7 @@ public class Matrix implements Number {
 
         if(rows.length == 2)
             return new2x2(a22().multiply(d), a12().negate().multiply(d), a21().negate().multiply(d), a11().multiply(d));
-//        if(rows.length == 3)
+//        if(columns.length == 3)
 //            return adjugate().scale(d);
         return adjugate().scale(d);
     }
@@ -557,14 +602,14 @@ public class Matrix implements Number {
     }
 
     public static Matrix fromRows(Number[]... rows) {
-        Arguments.deepCheckNull(rows, "rows");
+        Arguments.deepCheckNull(rows, "columns");
         if(rows.length == 0 || rows[0].length == 0)
             throw new IllegalArgumentException("Matrix cannot be empty");
         Number[][] copy = new Number[rows.length][];
         copy[0] = rows[0].clone();
         for(int i=1; i<rows.length; i++) {
             if(rows[i].length != rows[0].length)
-                throw new IllegalArgumentException("Matrix rows must contain the same number of elements");
+                throw new IllegalArgumentException("Matrix columns must contain the same number of elements");
             copy[i] = rows[i].clone();
         }
         return new Matrix(copy);
@@ -589,12 +634,12 @@ public class Matrix implements Number {
         if(rowsOrColumns.length == 0)
             throw new IllegalArgumentException("Matrix cannot be empty");
         if(!rowsOrColumns[0].isVector())
-            throw new IllegalArgumentException("Row or column vectors expected, got matrix");
+            throw new IllegalArgumentException("Row or columns vectors expected, got matrix");
 
         Matrix.Size size = rowsOrColumns[0].size();
         for(int i=1; i<rowsOrColumns.length; i++)
             if(!rowsOrColumns[i].size().equals(size))
-                throw new IllegalArgumentException("Either row or column vectors expected, got mix or matrix");
+                throw new IllegalArgumentException("Either row or columns vectors expected, got mix or matrix");
 
         if(rowsOrColumns[0].isRowVector()) {
             Number[][] rows = new Number[rowsOrColumns.length][];

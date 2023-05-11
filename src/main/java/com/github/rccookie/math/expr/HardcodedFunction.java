@@ -6,6 +6,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record HardcodedFunction(String name, BiFunction<SymbolLookup,Number[],Number> function, String... paramNames)
         implements Expression.Function {
@@ -43,6 +44,11 @@ record HardcodedFunction(String name, BiFunction<SymbolLookup,Number[],Number> f
     @Override
     public String toString() {
         return name;
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return RenderableExpression.name(name);
     }
 
     @Override

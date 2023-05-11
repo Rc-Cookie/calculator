@@ -1,6 +1,7 @@
 package com.github.rccookie.math.expr;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record OptimizedDerivedBinaryFunction(Expression.BinaryFunctionOperation base, Number optimize)
         implements Expression.BinaryFunctionOperation {
@@ -8,6 +9,11 @@ record OptimizedDerivedBinaryFunction(Expression.BinaryFunctionOperation base, N
     @Override
     public String toString() {
         return base.toString();
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return base.toRenderable();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.github.rccookie.math.expr;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record VariableDefinition(Expression nameExpr, String name, Expression expr) implements Expression.BinaryOperation {
 
@@ -28,6 +29,11 @@ record VariableDefinition(Expression nameExpr, String name, Expression expr) imp
     @Override
     public String toString() {
         return format("$1 := $2", nameExpr, expr);
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return toRenderable(RenderableExpression::def, true, nameExpr, expr);
     }
 
     @Override

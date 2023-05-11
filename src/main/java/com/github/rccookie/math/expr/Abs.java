@@ -1,6 +1,7 @@
 package com.github.rccookie.math.expr;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record Abs(Expression x) implements Expression.UnaryOperation {
 
@@ -33,5 +34,10 @@ record Abs(Expression x) implements Expression.UnaryOperation {
     @Override
     public int precedence() {
         return Integer.MIN_VALUE;
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return RenderableExpression.abs(x.toRenderable());
     }
 }

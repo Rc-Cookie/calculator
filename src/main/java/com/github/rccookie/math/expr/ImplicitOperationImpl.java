@@ -1,6 +1,9 @@
 package com.github.rccookie.math.expr;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
+
+import static com.github.rccookie.math.rendering.RenderableExpression.*;
 
 record ImplicitOperationImpl(Expression a, Expression b)
         implements Expression.ImplicitOperation {
@@ -29,6 +32,17 @@ record ImplicitOperationImpl(Expression a, Expression b)
             return as + '\u00B7' + bs;
         }
         return format("$x(" + b + ")", a);
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        if(a instanceof Constant || a instanceof Builder.VectorExpression) {
+            RenderableExpression ae = a.toRenderable(precedence(), true), be = b.toRenderable(precedence(), false);
+            if(endIsClear(ae.renderInline(RenderOptions.DEFAULT)) || startIsClear(be.renderInline(RenderOptions.DEFAULT)))
+                return concat(ae, be);
+            return mult(ae, be);
+        }
+        return toRenderable(n -> call(n, par(b.toRenderable())), a);
     }
 
     private static boolean endIsClear(String x) {

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.MathExpressionSyntaxException;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record LinearFunctionImpl(String[] indeterminants, Expression[] coefficients, Expression offset) implements LinearFunction {
 
@@ -41,5 +42,10 @@ record LinearFunctionImpl(String[] indeterminants, Expression[] coefficients, Ex
     @Override
     public Expression[] coefficients() {
         return coefficients.clone();
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return null;
     }
 }

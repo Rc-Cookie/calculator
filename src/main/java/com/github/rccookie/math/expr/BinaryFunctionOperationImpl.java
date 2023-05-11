@@ -5,9 +5,12 @@ import java.util.function.BinaryOperator;
 import java.util.stream.Stream;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 record BinaryFunctionOperationImpl(String name,
                                    String format,
+                                   BinaryOperator<RenderableExpression> renderer,
+                                   Boolean aIsLeft,
                                    Expression.Function a,
                                    Expression.Function b,
                                    int opPrecedence,
@@ -48,6 +51,11 @@ record BinaryFunctionOperationImpl(String name,
         return (paramNames.length == 1 ? paramNames[0] : "("+String.join(",", paramNames)+")")+" -> "+expr();
     }
 
+    @Override
+    public RenderableExpression toRenderable() {
+        return new RuntimeFunction(expr(), paramNames()).toRenderable();
+    }
+
     private boolean equalSignatures() {
         return !(a instanceof HardcodedFunction) && !(b instanceof HardcodedFunction) &&
                 Arrays.equals(a.paramNames(), b.paramNames());
@@ -59,11 +67,11 @@ record BinaryFunctionOperationImpl(String name,
         if(bs.expr() instanceof Constant bn) {
             if(as.expr() instanceof Constant an)
                 return new RuntimeFunction(Expression.of(operator.apply(an.value(), bn.value())), paramNames());
-            return as.derive(name, format, as, opPrecedence, operator);
+            return as.derive(name, format, renderer, aIsLeft, as, opPrecedence, operator);
         }
         if(as.expr() instanceof Constant an)
-            return bs.derive(name, formatFlipped(), an.value(), opPrecedence, (b,a) -> operator.apply(a,b));
-        return new BinaryFunctionOperationImpl(name, format, as, bs, opPrecedence, operator);
+            return bs.derive(name, formatFlipped(), (a,b) -> renderer.apply(b,a), !aIsLeft, an.value(), opPrecedence, (b,a) -> operator.apply(a,b));
+        return new BinaryFunctionOperationImpl(name, format, renderer, aIsLeft, as, bs, opPrecedence, operator);
     }
 
     private String formatFlipped() {
@@ -117,6 +125,23 @@ record BinaryFunctionOperationImpl(String name,
         @Override
         public int precedence() {
             return opPrecedence;
+        }
+
+        @Override
+        public RenderableExpression toRenderable() {
+            if(equalSignatures())
+                return toRenderable(renderer, aIsLeft, a, b);
+
+            String[] paramNames = paramNames();
+            Expression params;
+            if(paramNames.length == 1)
+                params = Symbol.of(paramNames[0]);
+            else {
+                Expression[] elements = new Expression[paramNames.length];
+                Arrays.setAll(elements, i -> Symbol.of(paramNames[i]));
+                params = Numbers.of(elements);
+            }
+            return toRenderable(renderer, aIsLeft, new FunctionCall(a, params), new FunctionCall(b, params));
         }
     }
 }

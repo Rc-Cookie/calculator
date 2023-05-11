@@ -4,6 +4,7 @@ import com.github.rccookie.json.JsonDeserialization;
 import com.github.rccookie.json.JsonSerializable;
 import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -239,6 +240,9 @@ public interface Number extends JsonSerializable {
     }
 
     double toDouble(SymbolLookup lookup);
+
+
+    RenderableExpression toRenderable();
 
 
     @NotNull

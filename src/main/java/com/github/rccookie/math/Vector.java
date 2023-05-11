@@ -1,14 +1,18 @@
 package com.github.rccookie.math;
 
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
 import com.github.rccookie.json.JsonArray;
 import com.github.rccookie.json.JsonDeserialization;
+import com.github.rccookie.math.expr.Expression;
 import com.github.rccookie.math.expr.MathEvaluationException;
 import com.github.rccookie.math.expr.MathExpressionSyntaxException;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.math.rendering.RenderableExpression;
+import com.github.rccookie.math.solve.LinearEquationSystem;
 import com.github.rccookie.primitive.int2;
 import com.github.rccookie.util.Arguments;
 
@@ -76,17 +80,52 @@ public class Vector implements Number {
     }
 
     @Override
+    public RenderableExpression toRenderable() {
+        return toRenderable(false);
+    }
+
+    private RenderableExpression toRenderable(boolean transpose) {
+        if(!isMatrix()) {
+            RenderableExpression[] c = new RenderableExpression[components.length];
+            for(int i=0; i<c.length; i++)
+                c[i] = components[i] instanceof Vector v ? v.toRenderable(!transpose) : components[i].toRenderable();
+            return transpose ? RenderableExpression.rowVec(c) : RenderableExpression.vec(c);
+        }
+        RenderableExpression[][] rows;
+        if(transpose) {
+            rows = new RenderableExpression[size(components[0])][components.length];
+            for(int i=0; i<rows.length; i++) for(int j=0; j<rows[i].length; j++)
+                rows[i][j] = get(j,i).toRenderable();
+        }
+        else {
+            rows = new RenderableExpression[components.length][size(components[0])];
+            for(int i=0; i<rows.length; i++) for(int j=0; j<rows[i].length; j++)
+                    rows[i][j] = get(i, j).toRenderable();
+        }
+        return RenderableExpression.matrix(rows);
+    }
+
+    @Override
     public Object toJson() {
         return new JsonArray((Object[]) components.clone());
     }
 
     @Override
-    public @NotNull Vector equalTo(Number x) {
-        return x instanceof Vector v ? equalTo(v) : derive(c -> c.equalTo(x));
-    }
+    public @NotNull Number equalTo(Number x) {
+        if(isScalar()) return components[0].equalTo(x);
+        do {
+            if(!(x instanceof Vector)) return Number.FALSE();
+        } while(((Vector) x).isScalar());
 
-    public Vector equalTo(Vector x) {
-        return derive(x, Number::equalTo);
+        Vector v = (Vector) x;
+        if(v.components.length != components.length) return Number.FALSE();
+
+        Number equality = Number.TRUE();
+        for(int i=0; i<components.length; i++) {
+            equality = equality.multiply(components[i].equalTo(v.components[i]));
+            if(equality.isZero()) return equality;
+        }
+        return equality;
     }
 
     @Override
@@ -156,7 +195,7 @@ public class Vector implements Number {
     public Vector[] rows() {
         if(isScalar()) return new Vector[] { this };
         if(!isMatrix())
-            throw new MathEvaluationException("Vector is not a matrix, cannot receive rows");
+            throw new MathEvaluationException("Vector is not a matrix, cannot receive columns");
 
         Vector[] rows = new Vector[components.length];
         for(int i=0; i<rows.length; i++)
@@ -191,14 +230,14 @@ public class Vector implements Number {
 
     public int columnCount() {
         if(!isMatrix())
-            throw new MathEvaluationException("Vector is not a matrix, cannot receive column count");
+            throw new MathEvaluationException("Vector is not a matrix, cannot receive columns count");
         if(components[0] instanceof Vector row)
             return row.components.length;
         return 1; // Primitive as row => one element
     }
 
     public Vector[] getMatrixRows() {
-        if(!isMatrix()) throw new MathEvaluationException("Vector is not a matrix, cannot receive matrix rows");
+        if(!isMatrix()) throw new MathEvaluationException("Vector is not a matrix, cannot receive matrix columns");
         Vector[] rows = new Vector[components.length];
         for(int i=0; i<rows.length; i++)
             rows[i] = Vector.asVector(components[i]);
@@ -235,6 +274,10 @@ public class Vector implements Number {
 
     private int2 getMatrixSize() {
         return new int2(components.length, size(components[0]));
+    }
+
+    private boolean isQuadratic() {
+        return components.length == size(components[0]);
     }
 
     private static int size(Number x) {
@@ -296,7 +339,7 @@ public class Vector implements Number {
     }
 
     @NotNull
-    public Number matrixMultiply(Vector matrix) {
+    public Vector matrixMultiply(Vector matrix) {
         int2 size = getMatrixSize(), otherSize = matrix.getMatrixSize();
         int m = size.x, n = size.y, otherM = otherSize.x, otherN = otherSize.y;
         if(n != otherM) throw new MathEvaluationException("Trying to multiply incompatible matrices");
@@ -360,24 +403,63 @@ public class Vector implements Number {
     }
 
     @Override
-    public @NotNull Vector raise(Number x) {
-        return x instanceof Vector v ? raise(v) : derive(c -> c.raise(x));
+    public @NotNull Number raise(Number x) {
+//            return x instanceof Vector v ? raise(v) : derive(c -> c.raise(x)
+        if(!isMatrix())
+            throw new MathEvaluationException("Trying to raise non-matrix vector");
+        if(!isQuadratic())
+            throw new MathEvaluationException("Trying to raise non-square matrix");
+
+        if(x instanceof Expression)
+            return x.raiseOther(this);
+        while(!(x instanceof Rational r)) {
+            if(x instanceof Complex c) {
+                if(!c.isReal()) throw new MathEvaluationException("Trying to raise matrix to complex number");
+                x = c.re;
+            }
+            else if(x instanceof Vector v) {
+                if(!v.isScalar()) throw new MathEvaluationException("Trying to raise matrix to vector");
+                x = v.components[0];
+            }
+            else throw new MathEvaluationException("Trying to raise matrix to non-integer");
+        }
+        if(!r.d.equals(BigInteger.ONE))
+            throw new MathEvaluationException("Trying to raise matrix to non-integer");
+        return raise(r.n);
     }
 
-    @NotNull
-    public Vector raise(Vector x) {
-        return derive(x, Number::raise);
+    private Vector raise(BigInteger x) {
+        if(x.equals(BigInteger.ONE)) return this;
+        if(x.equals(BigInteger.ZERO)) return identityMatrix(components.length);
+        if(x.signum() < 0) return invert0().raise(x.negate());
+        Vector result = this;
+        BigInteger raised = BigInteger.ONE;
+        BigInteger tmp;
+        while((tmp = raised.shiftLeft(1)).compareTo(x) <= 0) {
+            result = result.matrixMultiply(result);
+            raised = tmp;
+        }
+        while((tmp = raised.add(BigInteger.ONE)).compareTo(x) <= 0) {
+            result = result.matrixMultiply(this);
+            raised = tmp;
+        }
+        return result;
     }
+
+//    @NotNull
+//    public Vector raise(Vector x) {
+//        return derive(x, Number::raise);
+//    }
 
     @Override
-    public @NotNull Vector raiseOther(Number x) {
+    public @NotNull Number raiseOther(Number x) {
         return x instanceof Vector v ? raiseOther(v) : derive(c -> c.raiseOther(x));
     }
 
-    @NotNull
-    public Vector raiseOther(Vector x) {
-        return derive(x, Number::raiseOther);
-    }
+//    @NotNull
+//    public Vector raiseOther(Vector x) {
+//        return derive(x, Number::raiseOther);
+//    }
 
     @NotNull
     public Number sqrAbs() {
@@ -396,7 +478,30 @@ public class Vector implements Number {
 
     @Override
     public @NotNull Vector invert() {
-        return derive(Number::invert);
+        if(!isMatrix()) throw new MathEvaluationException("Trying to invert non-matrix");
+        if(!isQuadratic()) throw new MathEvaluationException("Trying to invert non-square matrix");
+        return invert0();
+    }
+
+    private @NotNull Vector invert0() {
+        int size = components.length;
+        Number[][] rows = new Number[size][2 * size];
+        for(int i=0; i<size; i++) for(int j=0; j<size; j++) {
+            rows[i][j] = get(i,j);
+            rows[i][j+size] = i == j ? Number.ONE() : Number.ZERO();
+        }
+
+        Number[][] invRows = new LinearEquationSystem(size, rows).solve().rows();
+        Vector[] rowVecs = new Vector[size];
+        for(int i=0; i<size; i++) {
+            Number[] row = new Number[size];
+            for(int j=0; j<size; j++) {
+                if(invRows[i][j] == null) throw new MathEvaluationException("Matrix has no inverse");
+                row[j] = invRows[i][j];
+            }
+            rowVecs[i] = new Vector(true, row);
+        }
+        return new Vector(true, rowVecs);
     }
 
     public @NotNull Vector normalize() {
@@ -432,20 +537,20 @@ public class Vector implements Number {
     }
 
     public static Vector matrixFromRows(Vector... rows) {
-        Arguments.deepCheckNull(rows, "rows");
+        Arguments.deepCheckNull(rows, "columns");
         if(rows.length == 0)
             throw new IllegalArgumentException("Matrix requires at least one row");
         int expected = rows[0].size();
         for(int i=1; i<rows.length; i++)
             if(rows[i].size() != expected)
-                throw new MathExpressionSyntaxException("Matrix rows must have same number of entries");
+                throw new MathExpressionSyntaxException("Matrix columns must have same number of entries");
         return new Vector(rows);
     }
 
     public static Vector matrixFromColumns(Vector... columns) {
         Arguments.deepCheckNull(columns, "columns");
         if(columns.length == 0)
-            throw new IllegalArgumentException("Matrix requires at least one column");
+            throw new IllegalArgumentException("Matrix requires at least one columns");
         Vector[] rows = new Vector[columns[0].size()];
 
         for(int i=1; i<columns.length; i++)
@@ -460,5 +565,16 @@ public class Vector implements Number {
         }
 
         return new Vector(true, rows);
+    }
+
+    public static Vector identityMatrix(int size) {
+        Arguments.checkRange(size, 1, null);
+        Vector matrix = new Vector(true, new Number[size]);
+        for(int i=0; i<matrix.components.length; i++) {
+            matrix.components[i] = new Vector(true, new Number[size]);
+            for(int j=0; j<size; j++)
+                ((Vector) matrix.components[i]).components[j] = i == j ? Number.ONE() : Number.ZERO();
+        }
+        return matrix;
     }
 }

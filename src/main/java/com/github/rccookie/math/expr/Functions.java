@@ -14,12 +14,14 @@ import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.SimpleNumber;
 import com.github.rccookie.math.Vector;
+import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.math.solve.LinearEquationSystem;
 import com.github.rccookie.math.solve.Polynom;
 
 import org.jetbrains.annotations.Contract;
 
 import static com.github.rccookie.math.Number.*;
+import static com.github.rccookie.math.rendering.RenderableExpression.*;
 
 public final class Functions {
 
@@ -57,6 +59,7 @@ public final class Functions {
     public static final Expression.Function COMPLEX_CONJUGATE = new HardcodedFunction("conj", Functions::complexConjugate);
     public static final Expression.Function VECTOR = new HardcodedFunction("vec", (l,p) -> vector(l, p[0], p[1]), "size", "comp");
     public static final Expression.Function MATRIX = new HardcodedFunction("mat", (l,p) -> matrix(l, p[0], p[1], p[2]), "m", "n", "comp");
+    public static final Expression.Function IDENTITY_MATRIX = new HardcodedFunction("idm", Functions::identityMatrix);
     public static final Expression.Function GET = new HardcodedFunction("get", Functions::get);
     public static final Expression.Function SIZE = new HardcodedFunction("size", Functions::size);
     public static final Expression.Function NORMALIZE = new HardcodedFunction("norm", Functions::normalize);
@@ -88,9 +91,9 @@ public final class Functions {
         a = value(a);
         b = value(b);
         if(a instanceof Expression.Function f)
-            return f.derive("min", "min($1,$2)", b, PRE, Functions::min);
+            return f.derive("min", "min($1,$2)", (a1,b1) -> call("min", a1, b1), null, b, PRE, Functions::min);
         if(b instanceof Expression.Function f)
-            return f.derive("min", "min($2,$1)", a, PRE, Functions::min);
+            return f.derive("min", "min($2,$1)", (a1,b1) -> call("min", b1, a1), null, a, PRE, Functions::min);
         if(b == SymbolLookup.UNSPECIFIED)
             return min(a);
         Number relation = a.lessThan(b);
@@ -110,9 +113,9 @@ public final class Functions {
         a = value(a);
         b = value(b);
         if(a instanceof Expression.Function f)
-            return f.derive("max", "max($1,$2)", b, PRE, Functions::max);
+            return f.derive("max", "max($1,$2)", (a1,b1) -> call("max", a1, b1), null, b, PRE, Functions::max);
         if(b instanceof Expression.Function f)
-            return f.derive("max", "max($2,$1)", a, PRE, Functions::max);
+            return f.derive("max", "max($2,$1)", (a1,b1) -> call("max", b1, a1), null, a, PRE, Functions::max);
         if(b == SymbolLookup.UNSPECIFIED)
             return max(a);
         Number relation = a.greaterThan(b);
@@ -137,7 +140,7 @@ public final class Functions {
             case SimpleNumber n -> new Rational(n.toBigDecimal().setScale(0, RoundingMode.FLOOR));
             case Complex c -> new Complex((SimpleNumber) floor(c.re), (SimpleNumber) floor(c.im));
             case Vector v -> v.derive(Functions::floor);
-            case Expression.Function f -> f.derive("floor", "floor($x)", PRE, Functions::floor);
+            case Expression.Function f -> f.derive("floor", "floor($x)", RenderableExpression::floor, PRE, Functions::floor);
             default -> throw new UnsupportedMathOperationException("floor", x);
         };
     }
@@ -149,7 +152,7 @@ public final class Functions {
             case SimpleNumber n -> new Rational(n.toBigDecimal().setScale(0, RoundingMode.CEILING));
             case Complex c -> new Complex((SimpleNumber) ceil(c.re), (SimpleNumber) ceil(c.im));
             case Vector v -> v.derive(Functions::ceil);
-            case Expression.Function f -> f.derive("ceil", "ceil($x)", PRE, Functions::ceil);
+            case Expression.Function f -> f.derive("ceil", "ceil($x)", RenderableExpression::ceil, PRE, Functions::ceil);
             default -> throw new UnsupportedMathOperationException("ceil", x);
         };
     }
@@ -160,7 +163,7 @@ public final class Functions {
             case SimpleNumber n -> new Rational(n.toBigDecimal().setScale(0, RoundingMode.HALF_UP));
             case Complex c -> new Complex((SimpleNumber) round(c.re), (SimpleNumber) round(c.im));
             case Vector v -> v.derive(Functions::round);
-            case Expression.Function f -> f.derive("round", "round($x)", PRE, Functions::round);
+            case Expression.Function f -> f.derive("round", "round($x)", x1 -> call("round", x1), PRE, Functions::round);
             default -> throw new UnsupportedMathOperationException("round", x);
         };
     }
@@ -173,7 +176,7 @@ public final class Functions {
             case SimpleNumber n -> sin(n);
             case Complex c -> sin(c);
             case Vector v -> v.derive(Functions::sin);
-            case Expression.Function f -> f.derive("sin", "sin($x)", PRE, Functions::sin);
+            case Expression.Function f -> f.derive("sin", "sin($x)", x1 -> call("sin", x1), PRE, Functions::sin);
             default -> throw new UnsupportedMathOperationException("sin", x);
         };
     }
@@ -196,7 +199,7 @@ public final class Functions {
             case SimpleNumber n -> cos(n);
             case Complex c -> cos(c);
             case Vector v -> v.derive(Functions::cos);
-            case Expression.Function f -> f.derive("cos", "cos($x)", PRE, Functions::cos);
+            case Expression.Function f -> f.derive("cos", "cos($x)", x1 -> call("cos", x1), PRE, Functions::cos);
             default -> throw new UnsupportedMathOperationException("cos", x);
         };
     }
@@ -225,7 +228,7 @@ public final class Functions {
             case SimpleNumber n -> asin(n);
             case Complex c -> asin(c);
             case Vector v -> v.derive(Functions::asin);
-            case Expression.Function f -> f.derive("asin", "asin($x)", PRE, Functions::asin);
+            case Expression.Function f -> f.derive("asin", "asin($x)", x1 -> call("asin", x1), PRE, Functions::asin);
             default -> throw new UnsupportedMathOperationException("asin", x);
         };
     }
@@ -255,7 +258,7 @@ public final class Functions {
             case SimpleNumber r -> acos(r);
             case Complex c -> acos(c);
             case Vector v -> v.derive(Functions::acos);
-            case Expression.Function f -> f.derive("acos", "acos($x)", PRE, Functions::acos);
+            case Expression.Function f -> f.derive("acos", "acos($x)", x1 -> call("acos", x1), PRE, Functions::acos);
             default -> throw new UnsupportedMathOperationException("acos", x);
         };
     }
@@ -286,7 +289,7 @@ public final class Functions {
             case SimpleNumber n -> atan(n);
             case Complex c -> atan(c);
             case Vector v -> v.derive(Functions::atan);
-            case Expression.Function f -> f.derive("atan", "atan($x)", PRE, Functions::atan);
+            case Expression.Function f -> f.derive("atan", "atan($x)", x1 -> call("atan", x1), PRE, Functions::atan);
             default -> throw new UnsupportedMathOperationException("atan", x);
         };
     }
@@ -306,9 +309,9 @@ public final class Functions {
         Number _y = value(y);
         Number _x = value(x);
         if(_y instanceof Expression.Function f)
-            return f.derive("atan2", "atan2($1,$2)", _x, PRE, Functions::atan2);
+            return f.derive("atan2", "atan2($1,$2)", (y1,x1) -> call("atan2", y1, x1), null, _x, PRE, Functions::atan2);
         if(_x instanceof Expression.Function f)
-            return f.derive("atan2", "atan2($2,1)", _y, PRE, Functions::atan2);
+            return f.derive("atan2", "atan2($2,$1)", (x1,y1) -> call("atan2", y1, x1), null, _y, PRE, Functions::atan2);
         if(_y instanceof Vector vy) {
             if(_x instanceof Vector vx)
                 return vy.derive(vx, Functions::atan2);
@@ -342,7 +345,7 @@ public final class Functions {
             case SimpleNumber n -> exp(n);
             case Complex c -> exp(c);
             case Vector v -> v.derive(Functions::exp);
-            case Expression.Function f -> f.derive("exp", "exp($x)", PRE, Functions::exp);
+            case Expression.Function f -> f.derive("exp", "exp($x)", RenderableExpression::exp, PRE, Functions::exp);
             default -> throw new UnsupportedMathOperationException("exp", x);
         };
     }
@@ -366,7 +369,7 @@ public final class Functions {
             case SimpleNumber r -> ln(r);
             case Complex c -> ln(c);
             case Vector v -> v.derive(Functions::ln);
-            case Expression.Function f -> f.derive("ln", "ln($x)", PRE, Functions::ln);
+            case Expression.Function f -> f.derive("ln", "ln($x)", x1 -> call("ln", x1), PRE, Functions::ln);
             default -> throw new UnsupportedMathOperationException("ln", x);
         };
     }
@@ -413,7 +416,7 @@ public final class Functions {
             }
             case Complex c -> c.theta();
             case Vector v -> v.derive(Functions::argument);
-            case Expression.Function f -> f.derive("argument", "arg($1,$2)", PRE, Functions::argument);
+            case Expression.Function f -> f.derive("argument", "arg($x)", x1 -> call("arg", x1), PRE, Functions::argument);
             default -> throw new UnsupportedMathOperationException("argument", x);
         };
     }
@@ -424,7 +427,7 @@ public final class Functions {
             case SimpleNumber n -> n;
             case Complex c -> c.re;
             case Vector v -> v.derive(Functions::re);
-            case Expression.Function f -> f.derive("re", "re($1,$2)", PRE, Functions::re);
+            case Expression.Function f -> f.derive("re", "re($x)", x1 -> call("re", x1), PRE, Functions::re);
             default -> throw new UnsupportedMathOperationException("re", x);
         };
     }
@@ -435,7 +438,7 @@ public final class Functions {
             case SimpleNumber ignored -> ZERO();
             case Complex c -> c.im;
             case Vector v -> v.derive(Functions::im);
-            case Expression.Function f -> f.derive("im", "im($1,$2)", PRE, Functions::im);
+            case Expression.Function f -> f.derive("im", "im($x)", x1 -> call("im", x1), PRE, Functions::im);
             default -> throw new UnsupportedMathOperationException("im", x);
         };
     }
@@ -446,7 +449,7 @@ public final class Functions {
             case SimpleNumber n -> n;
             case Complex c -> c.conjugate();
             case Vector v -> v.derive(Functions::complexConjugate);
-            case Expression.Function f -> f.derive("conj", "conj($x$)", PRE, Functions::complexConjugate);
+            case Expression.Function f -> f.derive("conj", "conj($x)", x1 -> call("conj", x1), PRE, Functions::complexConjugate);
             default -> throw new UnsupportedMathOperationException("conj", x);
         };
     }
@@ -456,7 +459,7 @@ public final class Functions {
         size = value(size);
         Number _componentF = value(componentF);
         if(size instanceof Expression.Function f)
-            return f.derive("dot", "dot($1,$2)", _componentF, PRE, (s,$) -> vector(l,s,_componentF));
+            return f.derive("vec", "vec($1,$2)", (s,cf) -> call("vec", cf, s), null, componentF, PRE, (s,cf) -> vector(l,s,cf));
         int s = (int) size.toDouble(l);
         if(s < 1) throw new MathEvaluationException("Non-positive vector size");
         Number[] c = new Number[s];
@@ -473,12 +476,12 @@ public final class Functions {
         Number _n = value(n);
         Number _componentF = value(componentF);
         if(_m instanceof Expression.Function f)
-            return f.derive("dot", "dot($x,"+_n+","+_componentF+")", PRE, mm -> matrix(l,mm, _n, _componentF));
+            return f.derive("mat", "mat($x,"+_n+","+_componentF+")", mm -> call("matrix", mm, n.toRenderable(), componentF.toRenderable()), PRE, mm -> matrix(l,mm, _n, _componentF));
         if(_n instanceof Expression.Function f)
-            return f.derive("dot", "dot("+_m+",$x,"+_componentF+")", PRE, nn -> matrix(l,_m, nn, _componentF));
+            return f.derive("mat", "mat("+_m+",$x,"+_componentF+")", nn -> call("matrix", m.toRenderable(), nn, componentF.toRenderable()), PRE, nn -> matrix(l,_m, nn, _componentF));
         int mm = (int) _m.toDouble(l), nn = (int) _n.toDouble(l);
         if(mm < 1) throw new MathEvaluationException("Non-positive matrix row count");
-        if(nn < 1) throw new MathEvaluationException("Non-positive matrix column count");
+        if(nn < 1) throw new MathEvaluationException("Non-positive matrix columns count");
         Number[][] c = new Number[mm][nn];
         if(_componentF instanceof Expression.Function f)
             for(int i=0; i<mm; i++)
@@ -493,14 +496,28 @@ public final class Functions {
         return new Vector(rows);
     }
 
+    public static Number identityMatrix(Number size) {
+        size = value(size);
+        if(size instanceof Expression.Function f)
+            return f.derive("idm", "idm($x)", s -> call("idm", s), PRE, Functions::identityMatrix);
+
+        int s = (int) size.toDouble();
+        if(s < 1) throw new MathEvaluationException("Non-positive matrix size");
+
+        Number[][] rows = new Number[s][s];
+        for(int i=0; i<s; i++) for(int j=0; j<s; j++)
+            rows[i][j] = i == j ? Number.ONE() : Number.ZERO();
+        return Vector.matrixFromRows(Arrays.stream(rows).map(Vector::new).toArray(Vector[]::new));
+    }
+
 
     public static Number dot(Number a, Number b) {
         a = value(a);
         b = value(b);
         if(a instanceof Expression.Function f)
-            return f.derive("dot", "dot($1,$2)", b, PRE, Functions::dot);
+            return f.derive("dot", "dot($1,$2)", (aa,bb) -> call("dot", aa, bb), null, b, PRE, Functions::dot);
         if(b instanceof Expression.Function f)
-            return f.derive("dot", "dot($2,$1)", a, PRE, Functions::dot);
+            return f.derive("dot", "dot($2,$1)", (bb,aa) -> call("dot", aa, bb), null, a, PRE, Functions::dot);
         return dot(Vector.asVector(a), Vector.asVector(b));
     }
 
@@ -513,9 +530,9 @@ public final class Functions {
         a = value(a);
         b = value(b);
         if(a instanceof Expression.Function f)
-            return f.derive("cross", "cross($1,$2)", b, PRE, Functions::cross);
+            return f.derive("cross", "cross($1,$2)", (aa,bb) -> call("cross", aa, bb), null, b, PRE, Functions::cross);
         if(b instanceof Expression.Function f)
-            return f.derive("cross", "cross($2,$1)", a, PRE, Functions::cross);
+            return f.derive("cross", "cross($2,$1)", (bb,aa) -> call("cross", aa, bb), null, a, PRE, Functions::cross);
         if(!(a instanceof Vector av) || !(b instanceof Vector bv))
             throw new MathEvaluationException("Cross product requires two vectors");
         return cross(av, bv);
@@ -531,16 +548,16 @@ public final class Functions {
         a = value(a);
         b = value(b);
         if(a instanceof Expression.Function f)
-            return f.derive("mmult", "mmult($1,$2)", b, PRE, Functions::matrixMultiply);
+            return f.derive("mmult", "mmult($1,$2)", (aa,bb) -> call("mmult", aa, bb), null, b, PRE, Functions::matrixMultiply);
         if(b instanceof Expression.Function f)
-            return f.derive("mmult", "mmult($2,$1)", a, PRE, Functions::matrixMultiply);
+            return f.derive("mmult", "mmult($2,$1)", (bb,aa) -> call("mmult", aa, bb), null, a, PRE, Functions::matrixMultiply);
         return Vector.asVector(a).matrixMultiply(Vector.asVector(b));
     }
 
     public static Number transposition(Number x) {
         x = value(x);
         if(x instanceof Expression.Function f)
-            return f.derive("transp", "transp($x)", PRE, Functions::transposition);
+            return f.derive("transp", "transp($x)", xx -> call("transp", xx), PRE, Functions::transposition);
         Vector m = Vector.asVector(x);
         if(!m.isMatrix()) throw new MathEvaluationException("Cannot calculate transposition of non-matrix");
         Vector[] rows = new Vector[m.size()];
@@ -557,9 +574,9 @@ public final class Functions {
         m = value(m);
         b = value(b);
         if(m instanceof Expression.Function f)
-            return f.derive("gauss", "gauss($1,$2)", b, PRE, Functions::gauss);
+            return f.derive("gauss", "gauss($1,$2)", (aa,bb) -> call("gauss", aa, bb), null, b, PRE, Functions::gauss);
         if(b instanceof Expression.Function f)
-            return f.derive("gauss", "gauss($2,$1)", m, PRE, Functions::gauss);
+            return f.derive("gauss", "gauss($2,$1)", (bb,aa) -> call("gauss", aa, bb), null, m, PRE, Functions::gauss);
 
         Vector mv = Vector.asVector(m), bv = Vector.asVector(b);
         if(!mv.isMatrix() || !bv.isMatrix())
@@ -576,19 +593,17 @@ public final class Functions {
                 aug[i][j+unknowns] = bv.get(i,j);
         }
 
-        Number[][] solutions = new LinearEquationSystem(unknowns, aug).solve();
+        Number[][] solutions = new LinearEquationSystem(unknowns, aug).solve().rows();
         for(int i=0; i<solutions.length; i++) for(int j=0; j<solutions[0].length; j++)
             if(solutions[i][j] == null) solutions[i][j] = Expression.WILDCARD();
 
-        if(solutions.length == 1)
-            return new Vector(solutions[0]);
         return Vector.matrixFromRows(Arrays.stream(solutions).map(Vector::new).toArray(Vector[]::new));
     }
 
     private static Number homogenousGauss(Number m) {
         m = value(m);
         if(m instanceof Expression.Function f)
-            return f.derive("gauss", "gauss($x)", PRE, Functions::homogenousGauss);
+            return f.derive("gauss", "gauss($x)", mm -> call("gauss", mm), PRE, Functions::homogenousGauss);
 
         Vector mv = Vector.asVector(m);
         if(!mv.isMatrix())
@@ -599,7 +614,7 @@ public final class Functions {
         for(int i=0; i<height; i++) for(int j=0; j<width; j++)
             arr[i][j] = mv.get(i,j);
 
-        Number[] solution = new LinearEquationSystem(width, arr).solve()[0];
+        Number[] solution = new LinearEquationSystem(width, arr).solve().getHomogenousResult();
         for(int i=0; i<solution.length; i++)
             if(solution[i] == null)
                 solution[i] = new RuntimeFunction(Expression.Symbol.of("x"+i), "x"+i);
@@ -612,9 +627,9 @@ public final class Functions {
         m = value(m);
         b = value(b);
         if(m instanceof Expression.Function f)
-            return f.derive("reduce", "reduce($1,$2)", b, PRE, Functions::gaussReduction);
+            return f.derive("reduce", "reduce($1,$2)", (mm,bb) -> call("reduce", mm, bb), null, b, PRE, Functions::gaussReduction);
         if(b instanceof Expression.Function f)
-            return f.derive("reduce", "reduce($2,$1)", m, PRE, Functions::gaussReduction);
+            return f.derive("reduce", "reduce($2,$1)", (bb,mm) -> call("reduce", mm, bb), null, m, PRE, Functions::gaussReduction);
 
         Vector mv = Vector.asVector(m), bv = Vector.asVector(b);
         if(!mv.isMatrix() || !bv.isMatrix())
@@ -641,7 +656,7 @@ public final class Functions {
     private static Number homogenousGaussReduction(Number m) {
         m = value(m);
         if(m instanceof Expression.Function f)
-            return f.derive("reduce", "reduce($x)", PRE, Functions::homogenousGaussReduction);
+            return f.derive("reduce", "reduce($x)", mm -> call("reduce", mm), PRE, Functions::homogenousGaussReduction);
 
         LinearEquationSystem solution = toLinearEquations(m, "gauss reduction").toReducedEchelonForm();
         Vector[] rows = new Vector[solution.rowCount()];
@@ -654,12 +669,13 @@ public final class Functions {
     public static Number rank(Number x) {
         x = value(x);
         if(x instanceof Expression.Function f)
-            return f.derive("rank", "rank($x)", PRE, Functions::rank);
+            return f.derive("rank", "rank($x)", xx -> call("rank", xx), PRE, Functions::rank);
 
         LinearEquationSystem system = toLinearEquations(x, "rank");
-        Number[] solution = system.solve()[0];
+        Number[] solution = system.solve().getHomogenousResult();
         return new Rational(Arrays.stream(solution).filter(Objects::nonNull).count());
     }
+
 
     private static LinearEquationSystem toLinearEquations(Number m, String task) {
         Vector mv = Vector.asVector(m);
@@ -695,9 +711,9 @@ public final class Functions {
         if(v instanceof Expression.Constant c) v = c.value();
         if(i instanceof Expression.Constant c) i = c.value();
         if(v instanceof Expression.Function f)
-            return f.derive("get", "get($1,$2)", i, PRE, Functions::get);
+            return f.derive("get", "get($1,$2)", (vv,ii) -> call("get", vv, ii), null, i, PRE, Functions::get);
         if(i instanceof Expression.Function f)
-            return f.derive("get", "get($2,$1)", v, PRE, Functions::get);
+            return f.derive("get", "get($2,$1)", (ii,vv) -> call("get", vv, ii), v, PRE, Functions::get);
         if(i instanceof Expression.Numbers n) {
             if(n.size() == 0)
                 throw new MathEvaluationException("Indices expected, got empty list");
@@ -712,7 +728,7 @@ public final class Functions {
     public static Number size(Number x) {
         x = value(x);
         if(x instanceof Expression.Function f)
-            return f.derive("size", "size($x)", PRE, Functions::size);
+            return f.derive("size", "size($x)", xx -> call("size", xx), PRE, Functions::size);
         return x instanceof Vector v ? new Rational(v.size()) : ONE();
     }
 
@@ -721,7 +737,7 @@ public final class Functions {
         return switch(x) {
             case Vector v -> v.normalize();
             case Complex c -> c.normalize();
-            case Expression.Function f -> f.derive("norm", "norm($x)", PRE, Functions::normalize);
+            case Expression.Function f -> f.derive("norm", "norm($x)", xx -> call("norm", xx), PRE, Functions::normalize);
             case SimpleNumber n -> n.greaterThan(ZERO()).subtract(n.lessThan(ZERO()));
             default -> throw new UnsupportedMathOperationException(""+x);
         };
@@ -791,9 +807,9 @@ public final class Functions {
         Number _high = value(high);
         Number _f = value(f);
         if(_low instanceof Expression.Function lowF)
-            return lowF.derive(SIGMA, "sum($x,"+_high+","+_f+")", PRE, l -> sum(c, l, _high, _f));
+            return lowF.derive(SIGMA, "sum($x,"+_high+","+_f+")", l -> RenderableExpression.sum(l, _high.toRenderable(), _f.toRenderable()), PRE, l -> sum(c, l, _high, _f));
         if(_high instanceof Expression.Function highF)
-            return highF.derive(SIGMA, "sum("+_low+",$x,"+_f+")", PRE, h -> sum(c, _low, h, _f));
+            return highF.derive(SIGMA, "sum("+_low+",$x,"+_f+")", h -> RenderableExpression.sum(_low.toRenderable(), h, _f.toRenderable()), PRE, h -> sum(c, _low, h, _f));
         if(_low instanceof Vector lowV) {
             if(_high instanceof Vector highV)
                 return lowV.derive(highV, (l, h) -> sum(c,l,h,_f));
@@ -819,9 +835,9 @@ public final class Functions {
         Number _high = value(high);
         Number _f = value(f);
         if(_low instanceof Expression.Function lowF)
-            return lowF.derive(PI, "product($x,"+_high+","+f+")", PRE, l -> product(e, l, _high, _f));
+            return lowF.derive(PI, "product($x,"+_high+","+f+")", l -> prod(l, _high.toRenderable(), _f.toRenderable()), PRE, l -> product(e, l, _high, _f));
         if(_high instanceof Expression.Function highF)
-            return highF.derive(PI, "product("+_low+",$x,"+_f+")", PRE, h -> product(e, _low, h, _f));
+            return highF.derive(PI, "product("+_low+",$x,"+_f+")", h -> prod(_low.toRenderable(), h, _f.toRenderable()), PRE, h -> product(e, _low, h, _f));
         if(_low instanceof Vector lowV) {
             if(_high instanceof Vector highV)
                 return lowV.derive(highV, (l, h) -> product(e,l,h,_f));
@@ -858,9 +874,9 @@ public final class Functions {
         if(ind instanceof Vector v)
             return v.derive(c -> derivative(lookup, polynom, deg, c));
         if(deg instanceof Expression.Function f)
-            return f.derive("derivative", "($x)/d("+ind+")", PRE, c -> derivative(lookup, polynom, c, ind));
+            return f.derive("derivative", "($x)/d("+ind+")", c -> null, PRE, c -> derivative(lookup, polynom, c, ind));
         if(ind instanceof Expression.Function f)
-            return f.derive("derivative", "($x)/d("+ind+")", PRE, c -> derivative(lookup, polynom, deg, c));
+            return f.derive("derivative", "($x)/d("+ind+")", c -> null, PRE, c -> derivative(lookup, polynom, deg, c));
         int n;
         if(deg == SymbolLookup.UNSPECIFIED) n = 1;
         else {
@@ -882,9 +898,9 @@ public final class Functions {
         if(indeterminant instanceof Vector v)
             return v.derive(c -> antiderivative(lookup, polynom, degree, c));
         if(degree instanceof Expression.Function f)
-            return f.derive("antiderivative", "($x)d("+indeterminant+")", PRE, c -> antiderivative(lookup, polynom, c, indeterminant));
+            return f.derive("antiderivative", "($x)d("+indeterminant+")", c -> null, PRE, c -> antiderivative(lookup, polynom, c, indeterminant));
         if(indeterminant instanceof Expression.Function f)
-            return f.derive("antiderivative", "($x)d("+indeterminant+")", PRE, c -> antiderivative(lookup, polynom, degree, c));
+            return f.derive("antiderivative", "($x)d("+indeterminant+")", c -> null, PRE, c -> antiderivative(lookup, polynom, degree, c));
         int n;
         if(degree == SymbolLookup.UNSPECIFIED) n = 1;
         else {
@@ -908,11 +924,11 @@ public final class Functions {
         if(indeterminant instanceof Vector v)
             return v.derive(c -> integrate(lookup, polynom, a, b, c));
         if(a instanceof Expression.Function f)
-            return f.derive("integral", "int($x)d"+polynom.indeterminants()[0], PRE, c -> integrate(lookup, polynom, c, b, indeterminant));
+            return f.derive("integral", "int($x)d"+polynom.indeterminants()[0], c -> integral(c, b.toRenderable(), polynom.toRenderable(), indeterminant.toRenderable()), PRE, c -> integrate(lookup, polynom, c, b, indeterminant));
         if(b instanceof Expression.Function f)
-            return f.derive("integral", "int($x)d"+polynom.indeterminants()[0], PRE, c -> integrate(lookup, polynom, a, c, indeterminant));
+            return f.derive("integral", "int($x)d"+polynom.indeterminants()[0], c -> integral(a.toRenderable(), c, polynom.toRenderable(), indeterminant.toRenderable()), PRE, c -> integrate(lookup, polynom, a, c, indeterminant));
         if(indeterminant instanceof Expression.Function f)
-            return f.derive("integral", "int($x)d("+f+")", PRE, c -> integrate(lookup, polynom, a, b, c));
+            return f.derive("integral", "int($x)d("+f+")", c -> integral(a.toRenderable(), b.toRenderable(), polynom.toRenderable(), c), PRE, c -> integrate(lookup, polynom, a, b, c));
         double dInd = indeterminant.toDouble(lookup);
         if(dInd != (int) dInd) throw new ArithmeticException("Non-integer indeterminant");
         return polynom.integrate((int) dInd, lookup, a, b);

@@ -3,6 +3,9 @@ package com.github.rccookie.math.expr;
 import java.util.Arrays;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
+
+import static com.github.rccookie.math.rendering.RenderableExpression.*;
 
 record RuntimeFunction(Expression expr, String... paramNames)
         implements Expression.Function {
@@ -10,6 +13,16 @@ record RuntimeFunction(Expression expr, String... paramNames)
     @Override
     public String toString() {
         return format((paramNames.length == 1 ? paramNames[0] : '('+String.join(",", paramNames)+')')+" -> $x", expr);
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        String[] paramNames = paramNames();
+        RenderableExpression params;
+        if(paramNames.length == 1)
+            params = RenderableExpression.name(paramNames[0]);
+        else params = list(Arrays.stream(paramNames).map(RenderableExpression::name).toArray(RenderableExpression[]::new));
+        return infix(arrow(true, false), params, expr().toRenderable());
     }
 
     @Override

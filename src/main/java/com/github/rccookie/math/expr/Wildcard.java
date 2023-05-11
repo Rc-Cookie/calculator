@@ -1,6 +1,7 @@
 package com.github.rccookie.math.expr;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -24,6 +25,11 @@ public final class Wildcard implements Expression {
     @Override
     public String toString() {
         return "?";
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return RenderableExpression.num("?");
     }
 
     @Override

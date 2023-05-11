@@ -7,6 +7,7 @@ import java.util.Stack;
 
 import com.github.rccookie.math.Number;
 import com.github.rccookie.math.Vector;
+import com.github.rccookie.math.rendering.RenderableExpression;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -25,6 +26,11 @@ final class Builder implements Expression {
     public String toString() {
         String str = elements.toString();
         return "Builder: " + str.substring(0, str.length()-1);
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        throw new UnsupportedOperationException();
     }
 
     static Expression createEmpty(Stack<? extends Expression> stack) {
@@ -150,6 +156,11 @@ final class Builder implements Expression {
         @Override
         public String toString() {
             return Arrays.toString(elements);
+        }
+
+        @Override
+        public RenderableExpression toRenderable() {
+            return new Vector(elements).toRenderable();
         }
 
         @Override

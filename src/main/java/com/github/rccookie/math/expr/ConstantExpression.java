@@ -1,6 +1,7 @@
 package com.github.rccookie.math.expr;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.util.Arguments;
 
 import org.jetbrains.annotations.NotNull;
@@ -24,5 +25,10 @@ record ConstantExpression(@NotNull Number value) implements Expression.Constant 
     @Override
     public int hashCode() {
         return value.hashCode();
+    }
+
+    @Override
+    public RenderableExpression toRenderable() {
+        return value.toRenderable();
     }
 }
