@@ -8,6 +8,8 @@ import com.github.rccookie.math.rendering.RenderableExpression;
 
 import org.jetbrains.annotations.NotNull;
 
+import static com.github.rccookie.math.rendering.RenderableExpression.*;
+
 public class Complex implements Number {
 
     static {
@@ -249,7 +251,16 @@ public class Complex implements Number {
 
     @Override
     public RenderableExpression toRenderable() {
-        return RenderableExpression.plus(re.toRenderable(), im.toRenderable());
+        if(im.equals(Number.ZERO()))
+            return re.toRenderable();
+        if(re.equals(Number.ZERO()))
+            return im.equals(Number.ONE()) ? num("i") : im.equals(Number.MINUS_ONE()) ? neg(num("i")) : concat(im.toRenderable(), num("i"));
+        if(im.equals(Number.ONE()))
+            return plus(re.toRenderable(), num("i"));
+        if(im.equals(Number.MINUS_ONE()))
+            return minus(re.toRenderable(), num("i"));
+        RenderableExpression imExpr = concat(im.abs().toRenderable(), num("i"));
+        return im.lessThan(ZERO).isOne() ? minus(re.toRenderable(), imExpr) : plus(re.toRenderable(), imExpr);
     }
 
     public static Complex fromPolar(SimpleNumber theta) {
