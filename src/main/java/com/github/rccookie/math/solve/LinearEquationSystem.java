@@ -180,8 +180,6 @@ public final class LinearEquationSystem {
         LinearEquationSystem out = copy();
         int startI = 0;
 
-        Console.split("toEchelonForm");
-        Console.debug(out.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         for(int j=0; j<unknowns; j++) {
 
             // Move columns with zeros to bottom
@@ -210,8 +208,6 @@ public final class LinearEquationSystem {
 
             // The row added to the others is irrelevant now
             startI++;
-
-            Console.debug(out.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         }
         return out;
     }
@@ -220,10 +216,8 @@ public final class LinearEquationSystem {
         LinearEquationSystem echelon = toEchelonForm();
         if(echelon.isReducedEchelonForm(false)) return echelon;
 
-        LinearEquationSystem out = toEchelonForm().copy();
+        LinearEquationSystem out = echelon.copy();
 
-        Console.split("toReducedEchelonForm");
-        Console.debug(out.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         for(int i=rows.length-1; i>=0; i--) {
 
             // Find non-zero start of row
@@ -245,8 +239,6 @@ public final class LinearEquationSystem {
             for(int j2=unknowns; j2<rows[0].length; j2++)
                 out.rows[i][j2] = out.rows[i][j2].divide(out.rows[i][j]);
             out.rows[i][j] = Number.ONE();
-
-            Console.debug(out.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
         }
 
         return out;
@@ -291,15 +283,15 @@ public final class LinearEquationSystem {
         for(int i=0; i<rows.length; i++) for(int j=0; j<rows[0].length; j++)
             rows[i][j] = new Rational(lRows[i][j]);
         LinearEquationSystem lgs = new LinearEquationSystem(3, rows);
-        Console.log(lgs.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
+        Console.log(lgs.toRenderable().renderAsciiArt(RenderableExpression.RenderOptions.DEFAULT));
         Console.log(lgs.isEchelonForm(), lgs.isReducedEchelonForm());
 
         LinearEquationSystem zsf = lgs.toEchelonForm();
-        Console.log(zsf.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
+        Console.log(zsf.toRenderable().renderAsciiArt(RenderableExpression.RenderOptions.DEFAULT));
         Console.log(zsf.isEchelonForm(), zsf.isReducedEchelonForm());
 
         LinearEquationSystem rzsf = zsf.toReducedEchelonForm();
-        Console.log(rzsf.toRenderable().renderUnicode(RenderableExpression.RenderOptions.DEFAULT));
+        Console.log(rzsf.toRenderable().renderAsciiArt(RenderableExpression.RenderOptions.DEFAULT));
         Console.log(rzsf.isEchelonForm(), rzsf.isReducedEchelonForm());
 
         Console.log((Object) rzsf.solve());

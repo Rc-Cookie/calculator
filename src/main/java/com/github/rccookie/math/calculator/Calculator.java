@@ -23,6 +23,7 @@ import com.github.rccookie.math.expr.Functions;
 import com.github.rccookie.math.expr.MathEvaluationException;
 import com.github.rccookie.math.expr.MathExpressionSyntaxException;
 import com.github.rccookie.math.expr.SymbolLookup;
+import com.github.rccookie.math.rendering.CharacterSet;
 import com.github.rccookie.math.rendering.RenderableExpression;
 import com.github.rccookie.util.Args;
 import com.github.rccookie.util.ArgsParser;
@@ -51,6 +52,8 @@ public class Calculator implements JsonSerializable {
 
     static final String STATE_STORE_DIR = Utils.getAppdata() + "/calculator/states";
     private static final Path RECENT_STATE_DIR = Path.of(STATE_STORE_DIR, "_recent");
+    static final CharacterSet SUPPORTED_CHARSET = new CharacterSet(Charset.defaultCharset());
+
 
     private static final JsonObject DEFAULT_SETTINGS = new JsonObject(
             "precision", 50,
@@ -598,7 +601,7 @@ public class Calculator implements JsonSerializable {
                 case SMART, SMART_SCIENTIFIC -> RenderableExpression.RenderOptions.DecimalMode.SMART;
                 default -> RenderableExpression.RenderOptions.DecimalMode.DECIMAL_IF_POSSIBLE;
             };
-            System.out.println((renderMode != null ? renderMode : OutputMode.UNICODE).renderToString(res.toRenderable(), new RenderableExpression.RenderOptions(
+            System.out.println((renderMode != null ? renderMode : OutputMode.SUPPORTED_UNICODE).renderToString(res.toRenderable(), new RenderableExpression.RenderOptions(
                     precision,
                     m,
                     scientificNotation

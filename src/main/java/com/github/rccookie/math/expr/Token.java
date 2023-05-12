@@ -6,6 +6,7 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import com.github.rccookie.math.Number;
+import com.github.rccookie.math.Rational;
 import com.github.rccookie.math.rendering.RenderableExpression;
 
 sealed interface Token {
@@ -27,8 +28,8 @@ sealed interface Token {
 
     Operator DEGREE  = new Operator("\u00B0", Precedence.DEGREE, x -> x.multiply(Number.DEG_TO_RAD()));
     Operator PERCENT = new Operator("%", Precedence.PERCENT, x -> (Expression) x.divide(100));
-    Operator SQUARE  = new Operator("\u00B2", Precedence.POWER, x -> x.multiply(x));
-    Operator CUBE    = new Operator("\u00B3", Precedence.POWER, x -> x.multiply(x).multiply(x));
+    Operator SQUARE  = new Operator("\u00B2", Precedence.POWER, x -> x.raise(Number.TWO()));
+    Operator CUBE    = new Operator("\u00B3", Precedence.POWER, x -> x.raise(new Rational(3)));
 
     Operator DEFINE           = new Operator(":=", Precedence.DEFINE, FunctionDefinition::definition);
     Operator DEFINE_REVERSE   = new Operator("=:", Precedence.DEFINE, (b,a) -> FunctionDefinition.definition(a,b));
